@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tutorialBackground">
+
+    <TextView android:id="@+id/tutorial_foldersprocess_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:text="Carpetas que se procesarán" />
+
+    <TextView android:id="@+id/tutorial_foldersprocess_tv2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/tutorial_foldersprocess_tv"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:textSize="15sp"
+        android:text="Marca las carpetas cuyas fotos quieres que se fechen" />
+
+    <TextView android:id="@+id/tutorial_foldersprocess_tv4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/tutorial_foldersprocess_tv3"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:textSize="15sp"
+        android:text="O pulsa TODAS si no estás seguro" />
+
+    <TextView android:id="@+id/tutorial_foldersprocess_tv3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/tutorial_foldersprocess_tv2"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:textSize="15sp"
+        android:text="Por ejemplo, cámara, redes sociales..." />
+
+    <Button android:id="@+id/tutorial_foldersprocess_btn1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/tutorial_foldersprocess_tv4"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:text="TODAS" />
+
+    <android.support.v7.widget.RecyclerView android:id="@+id/tutorial_foldersprocess_lv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/tutorial_foldersprocess_btn1"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp" />
+
+</RelativeLayout>

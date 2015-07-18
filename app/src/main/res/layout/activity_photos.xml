@@ -1,0 +1,145 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:fab="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rlphotos"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <include android:id="@+id/tool_bar"
+        layout="@layout/tool_bar" />
+
+    <RelativeLayout android:id="@+id/photos_cover_rl"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/fab_material_blue_grey_500"
+        android:alpha="0.7"
+        android:elevation="2dp"
+        android:layout_below="@id/tool_bar"
+        android:visibility="invisible" />
+
+    <GridView android:id="@+id/photos_gridview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:horizontalSpacing="2dp"
+        android:elevation="1dp"
+        android:verticalSpacing="2dp"
+        android:layout_below="@id/tool_bar"
+        android:stretchMode="columnWidth"
+        />
+
+    <!--<com.gc.materialdesign.views.ButtonFlat
+        android:id="@+id/buttonFloat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginRight="24dp"
+        android:background="#1E88E5"
+        materialdesign:animate="true"
+        materialdesign:iconDrawable="@drawable/ic_launcher" />-->
+
+    <ProgressBar
+        android:indeterminate="true"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:id="@+id/loadingPhotosProgressBar"
+        style="?android:attr/progressBarStyle"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
+
+    <com.software.shell.fab.ActionButton
+        android:id="@+id/btnProcessSelectedPhotos"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="24dp"
+        android:layout_marginBottom="24dp"
+        android:elevation="6dp"
+        android:stateListAnimator="@drawable/photos_fab_animator"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        fab:type="DEFAULT"
+        fab:button_color="@color/colorAccent"
+        fab:button_colorPressed="@color/fab_color_pressed"
+        fab:image="@drawable/ic_done_24px"
+        fab:image_size="24dp"
+        fab:shadow_color="#757575"
+        fab:shadow_radius="1.0dp"
+        fab:shadow_xOffset="0.5dp"
+        fab:shadow_yOffset="1.0dp"
+        fab:show_animation="@anim/fab_roll_from_down" />
+
+    <com.software.shell.fab.ActionButton
+        android:id="@+id/fab_speeddial_action2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:stateListAnimator="@drawable/photos_fab_animator"
+        android:layout_gravity="center_vertical"
+        android:elevation="6dp"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="24dp"
+        android:layout_above="@id/btnProcessSelectedPhotos"
+        android:layout_marginBottom="24dp"
+        fab:type="MINI"
+        fab:button_color="@color/colorAccent"
+        fab:button_colorPressed="@color/fab_color_pressed"
+        fab:image="@drawable/ic_done_24px"
+        fab:shadow_color="#757575"
+        fab:shadow_radius="1.0dp"
+        fab:shadow_xOffset="0.5dp"
+        fab:shadow_yOffset="1.0dp"
+        fab:show_animation="@anim/fab_roll_from_down" />
+
+    <android.support.v7.widget.CardView
+        android:id="@+id/card_fab_speeddial_action2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@id/fab_speeddial_action2"
+        android:layout_above="@id/btnProcessSelectedPhotos"
+        android:layout_marginBottom="36dp"
+        android:layout_marginRight="4dp"
+        fab:cardUseCompatPadding="true">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Todas las fotos"
+            android:layout_margin="4dp" />
+    </android.support.v7.widget.CardView>
+
+    <android.support.v7.widget.CardView
+        android:id="@+id/card_fab_speeddial_action1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@+id/fab_speeddial_action1"
+        android:layout_above="@id/fab_speeddial_action2"
+        android:layout_marginBottom="36dp"
+        android:layout_marginRight="4dp"
+        fab:cardUseCompatPadding="true">
+
+        <TextView android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fotos seleccionadas"
+            android:layout_margin="4dp"/>
+
+    </android.support.v7.widget.CardView>
+
+    <com.software.shell.fab.ActionButton
+        android:id="@+id/fab_speeddial_action1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:stateListAnimator="@drawable/photos_fab_animator"
+        android:layout_gravity="center_vertical"
+        android:elevation="6dp"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="24dp"
+        android:layout_marginBottom="24dp"
+        android:layout_above="@id/fab_speeddial_action2"
+        fab:type="MINI"
+        fab:button_color="@color/colorAccent"
+        fab:button_colorPressed="@color/fab_color_pressed"
+        fab:image="@drawable/ic_done_24px"
+        fab:shadow_color="#BF360C"
+        fab:shadow_radius="1.0dp"
+        fab:shadow_xOffset="0.5dp"
+        fab:shadow_yOffset="1.0dp"
+        fab:show_animation="@anim/fab_roll_from_down" />
+
+</RelativeLayout>

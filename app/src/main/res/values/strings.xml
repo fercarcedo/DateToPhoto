@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Date To Photo</string>
+    <string name="app_version">0.9.21</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Ajustes</string>
+    <string name="pref_active_title">Procesar fotos automáticamente</string>
+    <string name="pref_active_summary">Procesar fotos mientras el dispositivo se carga</string>
+    <string name="pref_active_key">runcharging</string>
+    <string name="pref_active_default">true</string>
+    <string name="pref_overwrite_key">overwritephotos</string>
+    <string name="pref_overwrite_title">Sobreescribir fotos</string>
+    <string name="pref_overwrite_summary">Sobreescribir la foto original con la foto con fecha</string>
+    <string name="pref_shownotification_key">shownotification</string>
+    <string name="pref_shownotification_title">Mostrar notificación</string>
+    <string name="pref_shownotification_summary">Mostrar una notificación cuando se estén procesando las fotos</string>
+    <string name="pref_keeplargephoto_key">keeplargephoto</string>
+    <string name="pref_keeplargephoto_title">Fotos muy grandes</string>
+    <string name="pref_keeplargephoto_summary">Si la foto es muy grande, conservar la foto en su tamaño original y crear
+    una copia con fecha, pero más pequeña</string>
+    <string name="title_activity_about">Acerca de</string>
+    <string name="title_activity_settings">Opciones</string>
+    <string name="pref_folderstoprocess_key">folderstoprocess</string>
+    <string name="no_photos">No hay fotos sin fechar</string>
+
+    <string-array name="pref_folderstoprocess_entries">
+        <item>No tienes carpetas con fotos</item>
+    </string-array>
+
+    <string-array name="pref_folderstoprocess_entryvalues">
+        <item>nofolders</item>
+    </string-array>
+    <string name="title_activity_photos">Date To Photo</string>
+    <string name="title_activity_disk_space_usage">Espacio en disco</string>
+    <string name="title_activity_tutorial">TutorialActivity</string>
+</resources>

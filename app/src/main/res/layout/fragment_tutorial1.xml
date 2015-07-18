@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/tutorialBackground">
+
+    <TextView android:id="@+id/tutorial_autocharging_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:textStyle="bold"
+        android:text="Fechar fotos automáticamente"
+        android:layout_centerHorizontal="true" />
+
+    <TextView android:id="@+id/tutorial_tv_autocharging_1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="¿Quieres que Date To Photo feche tus fotos mientras tu dispositivo se carga?"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:layout_below="@id/tutorial_autocharging_title"
+        android:layout_centerHorizontal="true"
+        android:textSize="17sp" />
+
+    <TextView android:id="@+id/tutorial_tv_autocharging_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="(No tendrás que preocuparte por nada)"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/tutorial_tv_autocharging_1"
+        android:textSize="17sp" />
+
+    <TextView android:id="@+id/tutorial_tv_autocharging_3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Si quieres activarlo, marca la casilla de la esquina inferior izquierda:"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/tutorial_tv_autocharging_2"
+        android:textSize="18sp" />
+
+    <CheckBox android:id="@+id/tutorial_charging_enable_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginLeft="16dp"
+        android:layout_alignParentBottom="true" />
+
+    <TextView android:id="@+id/tutorial_charging_enable_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="Procesar fotos automáticamente durante la carga"
+        android:layout_alignParentRight="true"
+        android:layout_margin="8dp"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@id/tutorial_charging_enable_checkbox"/>
+
+</RelativeLayout>
