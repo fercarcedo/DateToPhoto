@@ -237,7 +237,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 anim.start();
             }
         }else{
-            //Si no estaba pulsado, mostramos los otros dos FABs
+            //Si no estaba pulsado, mostramos los otros dos FAB
             fabSpeedDial1.show();
             fabSpeedDial2.show();
             cardSpeedDial1.setVisibility(View.VISIBLE);
