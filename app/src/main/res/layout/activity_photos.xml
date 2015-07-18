@@ -16,15 +16,14 @@
         android:layout_below="@id/tool_bar"
         android:visibility="invisible" />
 
-    <GridView android:id="@+id/photos_gridview"
+    <GridView android:id="@+id/photos_grid"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:horizontalSpacing="2dp"
         android:elevation="1dp"
-        android:verticalSpacing="2dp"
         android:layout_below="@id/tool_bar"
-        android:stretchMode="columnWidth"
-        />
+        android:horizontalSpacing="2dp"
+        android:verticalSpacing="2dp"
+        android:stretchMode="columnWidth" />
 
     <!--<com.gc.materialdesign.views.ButtonFlat
         android:id="@+id/buttonFloat"
