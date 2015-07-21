@@ -12,6 +12,7 @@ import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
@@ -19,6 +20,7 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.software.shell.fab.ActionButton;
@@ -65,7 +67,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         cardSpeedDial1.setVisibility(View.GONE);
         cardSpeedDial2.setVisibility(View.GONE);
 
-        //Inicialmente los otros dos FABs no están visibles
+        //Inicialmente los FABs no están visibles
+        processPhotosBtn.hide();
         fabSpeedDial1.hide();
         fabSpeedDial2.hide();
 
@@ -193,7 +196,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 public void onClick(View v) {
                     TickedImageView view = (TickedImageView) v;
 
-                    if(view.isSelected())
+                    if (view.isSelected())
                         selectedPaths.add(images.get(position));
                     else
                         selectedPaths.remove(images.get(position));
@@ -220,12 +223,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 //El centro de la animación de revelar es el botón
-                int cx = processPhotosBtn.getMeasuredWidth() / 2;
-                int cy = processPhotosBtn.getMeasuredHeight() / 2;
+                int cx = (processPhotosBtn.getLeft() + processPhotosBtn.getRight()) / 2;
+                int cy = (processPhotosBtn.getTop() + processPhotosBtn.getBottom()) / 2;
 
                 int finalRadius = Math.max(coverRl.getWidth(), coverRl.getHeight()) / 2;
 
-                Animator anim = ViewAnimationUtils.createCircularReveal(processPhotosBtn, cx, cy, 0, finalRadius);
+                Animator anim = ViewAnimationUtils.createCircularReveal(coverRl, cx, cy, 0, finalRadius);
 
                 anim.addListener(new AnimatorListenerAdapter() {
                     @Override
@@ -245,12 +248,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 //El centro de la animación de revelar es el botón
-                int cx = processPhotosBtn.getMeasuredWidth() / 2;
-                int cy = processPhotosBtn.getMeasuredHeight() / 2;
+                int cx = (processPhotosBtn.getLeft() + processPhotosBtn.getRight()) / 2;
+                int cy = (processPhotosBtn.getTop() + processPhotosBtn.getBottom()) / 2;
 
                 int finalRadius = Math.max(coverRl.getWidth(), coverRl.getHeight()) / 2;
 
-                Animator anim = ViewAnimationUtils.createCircularReveal(processPhotosBtn, cx, cy, 0, finalRadius);
+                Animator anim = ViewAnimationUtils.createCircularReveal(coverRl, cx, cy, 0, finalRadius);
                 coverRl.setVisibility(View.VISIBLE);
                 anim.start();
             }
@@ -285,6 +288,14 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
             if(loadingBar.getVisibility() == View.VISIBLE)
                 loadingBar.setVisibility(View.INVISIBLE);
+
+            TextView noPhotosTextView = (TextView) findViewById(R.id.nophotostv);
+
+            if(imagesToProcess.size() == 0) {
+                noPhotosTextView.setVisibility(View.VISIBLE);
+            }else{
+                processPhotosBtn.show();
+            }
         }
     }
 }
