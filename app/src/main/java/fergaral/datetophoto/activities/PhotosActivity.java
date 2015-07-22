@@ -2,35 +2,47 @@ package fergaral.datetophoto.activities;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Rect;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.bumptech.glide.Glide;
+import com.github.lzyzsd.circleprogress.DonutProgress;
 import com.software.shell.fab.ActionButton;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Queue;
+import java.util.prefs.PreferenceChangeEvent;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
+import fergaral.datetophoto.services.RegisterPhotoURIIntoDBService;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.TickedImageView;
 import fergaral.datetophoto.utils.Utils;
@@ -40,6 +52,8 @@ import fergaral.datetophoto.utils.Utils;
  */
 public class PhotosActivity extends AppCompatActivity implements ProgressChangedListener {
 
+    public static final String EXTRA_IMAGE_URI = "fergaraldatetophotoextraimageuri";
+
     private GridView photosGrid;
     private ArrayList<String> selectedPaths;
     private boolean wasFABPressed;
@@ -47,6 +61,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private RelativeLayout coverRl;
     private int mNumberOfColumns;
     private CardView cardSpeedDial1, cardSpeedDial2;
+    private DonutProgress circleProgress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +75,17 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         processPhotosBtn = (ActionButton) findViewById(R.id.btnProcessSelectedPhotos);
         fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
+        circleProgress = (DonutProgress) findViewById(R.id.progress_circle);
         coverRl = (RelativeLayout) findViewById(R.id.photos_cover_rl);
+
+        coverRl.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //Pulsar el fondo gris es equivalente a pulsar el botón grande
+                clickBigFAB();
+            }
+        });
+
         cardSpeedDial1 = (CardView) findViewById(R.id.card_fab_speeddial_action1);
         cardSpeedDial2 = (CardView) findViewById(R.id.card_fab_speeddial_action2);
 
@@ -107,6 +132,46 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         photosGrid = (GridView) findViewById(R.id.photos_grid);
 
         new ImagesToProcessTask().execute(new PhotoUtils(this).getCameraImages());
+
+        Intent intent = getIntent();
+
+        //Verificamos si la aplicación se abrió desde el menú de compartir, y si se compartieron 1 o varias fotos
+        if(savedInstanceState == null) {
+            if (Intent.ACTION_SEND.equals(intent.getAction()))
+                handleSingleImage(intent);
+            else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction()))
+                handleMultipleImages(intent);
+        }
+
+        //Si es la primera vez que se abre la aplicación, buscamos si ya hay fotos sin fechar en el dispositivo
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean searchPhotos = prefs.getBoolean("searchPhotosFirstUse", true);
+
+        if(searchPhotos) {
+            //Buscamos si hay fotos sin fechar
+            Utils.searchForAlreadyProcessedPhotos(this, new ProgressChangedListener() {
+                private int total;
+
+                @Override
+                public void reportTotal(final int total) {
+
+                }
+
+                @Override
+                public void onProgressChanged(final int progress) {
+
+                }
+
+                @Override
+                public void reportEnd(boolean fromActionShare) {
+
+                }
+            });
+
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("searchPhotosFirstUse", false);
+            editor.apply();
+        }
     }
 
     @Override
@@ -136,18 +201,33 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     @Override
-    public void reportTotal(int total) {
+    public void reportTotal(final int total) {
 
     }
 
     @Override
-    public void onProgressChanged(int progress) {
+    public void onProgressChanged(final int progress) {
 
     }
 
     @Override
-    public void reportEnd(boolean fromActionShare) {
-
+    public void reportEnd(final boolean fromActionShare) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if(fromActionShare) {
+                    //Las fotos fueron compartidas desde una aplicación, mostramos el diálogo que advierte al usuario de que las
+                    //fotos ya fechadas están en la carpeta DateToPhoto
+                    new MaterialDialog.Builder(PhotosActivity.this)
+                            .title("El proceso ha finalizado")
+                            .content("Como las fotos han sido compartidas desde una aplicación, las fotos con fecha se han guardado en la" +
+                                    " carpeta DateToPhoto. Si quieres que la foto con fecha se guarde en la misma carpeta que la original " +
+                                    " (o que la sobreescriba, no feches las fotos desde el botón de compartir)")
+                            .positiveText("De acuerdo")
+                            .show();
+                }
+            }
+        });
     }
 
     public class PhotosAdapter extends BaseAdapter {
@@ -223,12 +303,15 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 //El centro de la animación de revelar es el botón
-                int cx = (processPhotosBtn.getLeft() + processPhotosBtn.getRight()) / 2;
-                int cy = (processPhotosBtn.getTop() + processPhotosBtn.getBottom()) / 2;
+                float x = processPhotosBtn.getX();
+                float y = processPhotosBtn.getY();
+
+                int cx = (int) (x + (x + processPhotosBtn.getWidth())) / 2;
+                int cy = (int) (y + (y - processPhotosBtn.getHeight())) / 2;
 
                 int finalRadius = Math.max(coverRl.getWidth(), coverRl.getHeight()) / 2;
 
-                Animator anim = ViewAnimationUtils.createCircularReveal(coverRl, cx, cy, 0, finalRadius);
+                Animator anim = ViewAnimationUtils.createCircularReveal(coverRl, cx, cy, finalRadius, 0);
 
                 anim.addListener(new AnimatorListenerAdapter() {
                     @Override
@@ -239,6 +322,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 });
                 anim.start();
             }
+
+            //Al estar pulsado previamente, el icono que había era el aspa, así que lo cambiamos por el tick
+            processPhotosBtn.setImageResource(R.drawable.ic_done_24px);
         }else{
             //Si no estaba pulsado, mostramos los otros dos FAB
             fabSpeedDial1.show();
@@ -248,15 +334,22 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 //El centro de la animación de revelar es el botón
-                int cx = (processPhotosBtn.getLeft() + processPhotosBtn.getRight()) / 2;
-                int cy = (processPhotosBtn.getTop() + processPhotosBtn.getBottom()) / 2;
+                float x = processPhotosBtn.getX();
+                float y = processPhotosBtn.getY();
+
+                int cx = (int) (x + (x + processPhotosBtn.getWidth())) / 2;
+                int cy = (int) (y + (y - processPhotosBtn.getHeight())) / 2;
 
                 int finalRadius = Math.max(coverRl.getWidth(), coverRl.getHeight()) / 2;
 
                 Animator anim = ViewAnimationUtils.createCircularReveal(coverRl, cx, cy, 0, finalRadius);
+                anim.setInterpolator(new AccelerateDecelerateInterpolator());
                 coverRl.setVisibility(View.VISIBLE);
                 anim.start();
             }
+
+            //Al no estar pulsado previamente, el icono que había era el tick, así que lo cambiamos por el aspa
+            processPhotosBtn.setImageResource(R.drawable.ic_clear_24dp);
         }
 
         wasFABPressed = !wasFABPressed;
@@ -296,6 +389,47 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             }else{
                 processPhotosBtn.show();
             }
+        }
+    }
+
+    private void handleSingleImage(Intent intent) {
+        Uri imageUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        ArrayList<String> selectedPaths = new ArrayList<>();
+
+        if(imageUri != null) {
+            selectedPaths.add(imageUri.toString());
+            //Lanzamos el servicio de procesar fotos por URI con la foto
+            Utils.startProcessPhotosURIService(this, this, selectedPaths);
+
+            //Si podemos encontrar la ruta local de la foto, la añadimos a la BD
+            Intent addPhotoIntent = new Intent(this, RegisterPhotoURIIntoDBService.class);
+
+            ArrayList<Uri> imageUris = new ArrayList<>();
+            imageUris.add(imageUri);
+
+            addPhotoIntent.putExtra(EXTRA_IMAGE_URI, imageUris);
+            startService(addPhotoIntent);
+        }
+    }
+
+    private void handleMultipleImages(Intent intent) {
+        ArrayList<Uri> imageUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+        ArrayList<String> selectedPaths = new ArrayList<>();
+
+        if(imageUris != null) {
+            for(Uri uri : imageUris) {
+                if(uri != null) {
+                    selectedPaths.add(uri.toString());
+                }
+            }
+
+            //Procesamos las fotos
+            Utils.startProcessPhotosURIService(this, this, selectedPaths);
+
+            //Si existe la ruta local de la URI, añadimos la ruta de la foto a la base de datos
+            Intent addPhotosIntent = new Intent(this, RegisterPhotoURIIntoDBService.class);
+            addPhotosIntent.putExtra(EXTRA_IMAGE_URI, imageUris);
+            startService(addPhotosIntent);
         }
     }
 }
