@@ -76,6 +76,7 @@
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/recyclerview-v7/22.2.0/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/support-v4/22.2.0/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.github.lecho/hellocharts-library/1.5.3/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.github.lzyzsd/circleprogress/1.1.0/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.github.machinarius/preferencefragment/0.1.1/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.github.navasmdc/MaterialDesign/1.4/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.github.shell-software/fab/1.0.5/jars" />
@@ -103,6 +104,7 @@
     <orderEntry type="library" exported="" name="hellocharts-library-1.5.3" level="project" />
     <orderEntry type="library" exported="" name="support-v4-22.2.0" level="project" />
     <orderEntry type="library" exported="" name="support-annotations-22.2.0" level="project" />
+    <orderEntry type="library" exported="" name="circleprogress-1.1.0" level="project" />
     <orderEntry type="library" exported="" name="recyclerview-v7-22.2.0" level="project" />
     <orderEntry type="library" exported="" name="cardview-v7-22.2.0" level="project" />
     <orderEntry type="library" exported="" name="appcompat-v7-22.2.0" level="project" />

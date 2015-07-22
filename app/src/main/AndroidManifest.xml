@@ -77,6 +77,9 @@
         <service android:name=".services.DetectAlreadyProcessedPhotosService"
             android:exported="false" />
 
+        <service android:name=".services.RegisterPhotoURIIntoDBService"
+            android:exported="false" />
+
         <activity
             android:name=".activities.SettingsActivity"
             android:label="@string/title_activity_settings"

@@ -237,7 +237,7 @@ public class ProcessPhotosURIService extends IntentService {
                     myBitmap = decodeUri(this, uri);
                 }catch(IOException e) {
                     e.printStackTrace();
-                    end(intent);
+                    continue;
                 }
 
                 if (myBitmap == null) {

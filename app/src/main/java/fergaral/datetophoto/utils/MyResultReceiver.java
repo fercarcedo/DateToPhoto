@@ -57,12 +57,12 @@ public class MyResultReceiver extends ResultReceiver {
                 receiver.onProgressChanged(resultData.getInt("progress"));
             }
             if(resultData.containsKey("end")) {
-                if(wakeLock != null)
+                if(wakeLock != null && wakeLock.isHeld())
                     wakeLock.release();
                 receiver.reportEnd(false);
             }
             if(resultData.containsKey("endShared")) {
-                if(wakeLock != null)
+                if(wakeLock != null && wakeLock.isHeld())
                     wakeLock.release();
                 receiver.reportEnd(true);
             }

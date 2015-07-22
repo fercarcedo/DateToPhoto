@@ -318,7 +318,11 @@ public class Utils {
     }
 
     public static String getRealPathFromURI(Context context, Uri contentUri) {
-        /*String[] proj = {MediaStore.Images.Media.DATA};
+
+        if(context == null || contentUri == null)
+            return null;
+
+        String[] proj = {MediaStore.Images.Media.DATA};
 
         CursorLoader cursorLoader = new CursorLoader(context, contentUri, proj, null, null, null);
         Cursor cursor = cursorLoader.loadInBackground();
@@ -326,26 +330,7 @@ public class Utils {
         int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
         cursor.moveToFirst();
 
-        return cursor.getString(columnIndex);*/
-
-
-        if(contentUri.toString().startsWith("content://")) {
-            ContentResolver contentResolver = context.getContentResolver();
-            Cursor cursor = contentResolver.query(contentUri, null, null, null, null);
-            cursor.moveToFirst();
-
-            String path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA));
-
-            cursor.close();
-
-            return path;
-        }
-
-        if(contentUri.toString().startsWith("file://")) {
-            return contentUri.toString().substring(7);
-        }
-
-        return contentUri.toString();
+        return cursor.getString(columnIndex);
     }
 
     public static void startProcessPhotosService(Context context, ProgressChangedListener listener, ArrayList<String> selectedPaths) {
