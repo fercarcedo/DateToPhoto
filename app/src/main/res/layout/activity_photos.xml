@@ -7,6 +7,15 @@
     <include android:id="@+id/tool_bar"
         layout="@layout/tool_bar" />
 
+    <fergaral.datetophoto.utils.ProgressCircle
+        android:id="@+id/progressCircle"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_margin="5dp"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:visibility="invisible" />
+
     <RelativeLayout android:id="@+id/photos_cover_rl"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

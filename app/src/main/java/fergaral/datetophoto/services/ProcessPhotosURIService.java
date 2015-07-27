@@ -227,8 +227,19 @@ public class ProcessPhotosURIService extends IntentService {
                 MimeTypeMap mime = MimeTypeMap.getSingleton();
                 String fileExtension = mime.getExtensionFromMimeType(contentResolver.getType(uri));
 
-                if(!(fileExtension.equals("jpeg") || fileExtension.equals("jpg") || fileExtension.equals("png")))
-                    continue;
+                if(fileExtension != null) {
+                    if (!(fileExtension.equals("jpeg") || fileExtension.equals("jpg") || fileExtension.equals("png")))
+                        continue;
+                }else{
+                    //Podría ser que la URI fuese de la forma file:/// (porque las de la forma content:/// pasan siempre
+                    //por el if). Intentamos ver si no acaba en alguno de los formatos admitidos
+
+                    String uriString = uri.toString();
+
+                    if(!(uriString.endsWith(".jpeg") || uriString.endsWith(".jpg") || uriString.endsWith(".png"))) {
+                        continue;
+                    }
+                }
 
                 Bitmap myBitmap = null;
 
@@ -280,9 +291,9 @@ public class ProcessPhotosURIService extends IntentService {
                         Date currentDate = new Date();
                         Calendar calendar = Calendar.getInstance();
                         calendar.setTime(currentDate);
-                        exifDate = calendar.get(Calendar.YEAR) + "_" + (calendar.get(Calendar.MONTH) + 1) + "_"
-                                + calendar.get(Calendar.DAY_OF_MONTH) + "_" + calendar.get(Calendar.HOUR_OF_DAY)
-                                + calendar.get(Calendar.MINUTE) + "_" + calendar.get(Calendar.SECOND);
+                        exifDate = calendar.get(Calendar.YEAR) + "" + (calendar.get(Calendar.MONTH) + 1) + ""
+                                + calendar.get(Calendar.DAY_OF_MONTH) + "" + calendar.get(Calendar.HOUR_OF_DAY)
+                                + calendar.get(Calendar.MINUTE) + "" + calendar.get(Calendar.SECOND);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -292,9 +303,9 @@ public class ProcessPhotosURIService extends IntentService {
                     Date currentDate = new Date();
                     Calendar calendar = Calendar.getInstance();
                     calendar.setTime(currentDate);
-                    exifDate = calendar.get(Calendar.YEAR) + "_" + (calendar.get(Calendar.MONTH) + 1) + "_"
-                            + calendar.get(Calendar.DAY_OF_MONTH) + "_" + calendar.get(Calendar.HOUR_OF_DAY)
-                            + calendar.get(Calendar.MINUTE) + "_" + calendar.get(Calendar.SECOND);
+                    exifDate = calendar.get(Calendar.YEAR) + "" + (calendar.get(Calendar.MONTH) + 1) + ""
+                            + calendar.get(Calendar.DAY_OF_MONTH) + "" + calendar.get(Calendar.HOUR_OF_DAY)
+                            + calendar.get(Calendar.MINUTE) + "" + calendar.get(Calendar.SECOND);
                 }
 
                 if(date.equals("")) {
@@ -645,6 +656,4 @@ public class ProcessPhotosURIService extends IntentService {
 
         return BitmapFactory.decodeStream(c.getContentResolver().openInputStream(uri), null, options);
     }
-
-
 }

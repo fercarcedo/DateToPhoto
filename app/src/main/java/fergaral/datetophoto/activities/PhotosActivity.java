@@ -44,6 +44,7 @@ import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.services.RegisterPhotoURIIntoDBService;
 import fergaral.datetophoto.utils.PhotoUtils;
+import fergaral.datetophoto.utils.ProgressCircle;
 import fergaral.datetophoto.utils.TickedImageView;
 import fergaral.datetophoto.utils.Utils;
 
@@ -62,6 +63,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private int mNumberOfColumns;
     private CardView cardSpeedDial1, cardSpeedDial2;
     private DonutProgress circleProgress;
+    private ProgressCircle progressCircle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +79,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
         circleProgress = (DonutProgress) findViewById(R.id.progress_circle);
         coverRl = (RelativeLayout) findViewById(R.id.photos_cover_rl);
+        progressCircle = (ProgressCircle) findViewById(R.id.progressCircle);
 
         coverRl.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -202,12 +205,16 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
     @Override
     public void reportTotal(final int total) {
+        photosGrid.setVisibility(View.INVISIBLE);
+        progressCircle.setVisibility(View.VISIBLE);
 
+        //Establecemos el total de fotos a fechar
+        progressCircle.setTotal(total);
     }
 
     @Override
     public void onProgressChanged(final int progress) {
-
+        progressCircle.setProgress(progress);
     }
 
     @Override
@@ -228,6 +235,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 }
             }
         });
+
+        photosGrid.setVisibility(View.VISIBLE);
+        progressCircle.setVisibility(View.INVISIBLE);
     }
 
     public class PhotosAdapter extends BaseAdapter {
