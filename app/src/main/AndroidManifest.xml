@@ -98,11 +98,7 @@
         </activity>
         <activity
             android:name=".activities.PhotosActivity"
-            android:label="@string/title_activity_photos"
-            android:parentActivityName=".activities.MyActivity" >
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="fergaral.datetophoto.activities.MyActivity" />
+            android:label="@string/title_activity_photos">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

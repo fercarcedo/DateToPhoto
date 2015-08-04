@@ -9,9 +9,8 @@
 
     <fergaral.datetophoto.utils.ProgressCircle
         android:id="@+id/progressCircle"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:layout_margin="5dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
         android:visibility="invisible" />
@@ -158,12 +157,13 @@
         fab:shadow_yOffset="1.0dp"
         fab:show_animation="@anim/fab_roll_from_down" />
 
-    <com.github.lzyzsd.circleprogress.DonutProgress
-        android:id="@+id/progress_circle"
+    <TextView android:id="@+id/datestamping_photos_tv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="Fechando fotos..."
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
+        android:layout_above="@+id/progressCircle"
         android:visibility="invisible" />
 
 </RelativeLayout>

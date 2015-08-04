@@ -8,8 +8,8 @@ android {
         applicationId "fergaral.datetophoto"
         minSdkVersion 10
         targetSdkVersion 22
-        versionCode 25
-        versionName "0.9.21"
+        versionCode 26
+        versionName "0.10.0"
     }
     buildTypes {
         release {

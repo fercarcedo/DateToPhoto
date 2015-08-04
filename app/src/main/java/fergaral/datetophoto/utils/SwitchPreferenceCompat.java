@@ -7,7 +7,9 @@ import android.preference.CheckBoxPreference;
 import android.preference.TwoStatePreference;
 import android.support.v7.widget.SwitchCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
+import android.widget.CompoundButton;
 
 import fergaral.datetophoto.R;
 
@@ -44,16 +46,14 @@ public class SwitchPreferenceCompat extends CheckBoxPreference {
         setWidgetLayoutResource(R.layout.switch_preference_layout);
     }
 
-    //Este código es por si no ponemos el id del SwitchCompat como checkbox (@android:id/checkbox)
-    //y si no ponemos clickable="false" y focusable="false"
     /*@Override
     protected void onBindView(View view) {
         super.onBindView(view);
 
-        SwitchCompat switchView = (SwitchCompat) view.findViewById(R.id.switchpref);
+        mSwitch = (SwitchCompat) view.findViewById(R.id.switchpref);
 
-        if(switchView != null) {
-            switchView.setChecked(isChecked());
+        if(mSwitch != null) {
+            mSwitch.setChecked(isChecked());
         }
     }*/
 }

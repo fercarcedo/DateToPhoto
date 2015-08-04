@@ -8,6 +8,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -502,9 +503,19 @@ public class Utils {
             return;
 
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            activity.startActivity(intent);
-        }else{
             activity.startActivity(intent, ActivityOptions.makeSceneTransitionAnimation(activity).toBundle());
+        }else{
+            activity.startActivity(intent);
         }
+    }
+
+    public static void lockOrientation(Activity activity) {
+        //Bloqueamos la rotación a vertical
+        activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    }
+
+    public static void unlockOrientation(Activity activity) {
+        //Desbloqueamos la rotación
+        activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
  }

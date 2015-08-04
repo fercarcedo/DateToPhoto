@@ -62,8 +62,10 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private RelativeLayout coverRl;
     private int mNumberOfColumns;
     private CardView cardSpeedDial1, cardSpeedDial2;
-    private DonutProgress circleProgress;
     private ProgressCircle progressCircle;
+    private TextView datestampingPhotosTv;
+    private ProgressBar loadingBar;
+    private TextView noPhotosTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,12 +75,14 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         Toolbar toolbar = (Toolbar) findViewById(R.id.tool_bar);
         setSupportActionBar(toolbar);
 
+
         mNumberOfColumns = Utils.landscape(PhotosActivity.this) ? 5 : 3;
         processPhotosBtn = (ActionButton) findViewById(R.id.btnProcessSelectedPhotos);
+        loadingBar = (ProgressBar) findViewById(R.id.loadingPhotosProgressBar);
         fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
-        circleProgress = (DonutProgress) findViewById(R.id.progress_circle);
         coverRl = (RelativeLayout) findViewById(R.id.photos_cover_rl);
+        datestampingPhotosTv = (TextView) findViewById(R.id.datestamping_photos_tv);
         progressCircle = (ProgressCircle) findViewById(R.id.progressCircle);
 
         coverRl.setOnClickListener(new View.OnClickListener() {
@@ -113,6 +117,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             public void onClick(View v) {
                 //Se pulsó el botón de fechar las fotos seleccionadas
                 //Arrancamos el servicio de fechar fotos con las imágenes seleccionadas
+                clearSelectedPhotos();
+                processPhotosBtn.hide();
+
                 Utils.startProcessPhotosService(PhotosActivity.this, PhotosActivity.this, selectedPaths);
 
                 //Ocultamos los botones (es equivalente a pulsar el FAB grande)
@@ -123,6 +130,10 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         fabSpeedDial2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                clearSelectedPhotos();
+                processPhotosBtn.hide();
+
                 //Fechamos todas las fotos
                 Utils.startProcessPhotosService(PhotosActivity.this, PhotosActivity.this, null);
 
@@ -206,15 +217,21 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     @Override
     public void reportTotal(final int total) {
         photosGrid.setVisibility(View.INVISIBLE);
-        progressCircle.setVisibility(View.VISIBLE);
+        loadingBar.setVisibility(View.INVISIBLE);
+
+        Utils.lockOrientation(this);
 
         //Establecemos el total de fotos a fechar
         progressCircle.setTotal(total);
+        progressCircle.setVisibility(View.VISIBLE);
+        datestampingPhotosTv.setVisibility(View.VISIBLE);
+
+        selectedPaths = new ArrayList<>();
     }
 
     @Override
     public void onProgressChanged(final int progress) {
-        progressCircle.setProgress(progress);
+        progressCircle.setActual(this, progress);
     }
 
     @Override
@@ -222,7 +239,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if(fromActionShare) {
+                if (fromActionShare) {
                     //Las fotos fueron compartidas desde una aplicación, mostramos el diálogo que advierte al usuario de que las
                     //fotos ya fechadas están en la carpeta DateToPhoto
                     new MaterialDialog.Builder(PhotosActivity.this)
@@ -236,8 +253,17 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             }
         });
 
+        Utils.unlockOrientation(this);
         photosGrid.setVisibility(View.VISIBLE);
         progressCircle.setVisibility(View.INVISIBLE);
+        datestampingPhotosTv.setVisibility(View.INVISIBLE);
+
+        PhotosAdapter adapter = (PhotosAdapter) photosGrid.getAdapter();
+        if(adapter.isEmpty()) {
+            noPhotosTextView.setVisibility(View.VISIBLE);
+        }else{
+            processPhotosBtn.show();
+        }
     }
 
     public class PhotosAdapter extends BaseAdapter {
@@ -300,6 +326,10 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     .into(thumbV);
 
             return row;
+        }
+
+        public void removeImage(String image) {
+            images.remove(image);
         }
     }
 
@@ -387,12 +417,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
             photosGrid.setNumColumns(mNumberOfColumns);
 
-            ProgressBar loadingBar = (ProgressBar) findViewById(R.id.loadingPhotosProgressBar);
+            loadingBar = (ProgressBar) findViewById(R.id.loadingPhotosProgressBar);
 
             if(loadingBar.getVisibility() == View.VISIBLE)
                 loadingBar.setVisibility(View.INVISIBLE);
 
-            TextView noPhotosTextView = (TextView) findViewById(R.id.nophotostv);
+            noPhotosTextView = (TextView) findViewById(R.id.nophotostv);
 
             if(imagesToProcess.size() == 0) {
                 noPhotosTextView.setVisibility(View.VISIBLE);
@@ -440,6 +470,24 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             Intent addPhotosIntent = new Intent(this, RegisterPhotoURIIntoDBService.class);
             addPhotosIntent.putExtra(EXTRA_IMAGE_URI, imageUris);
             startService(addPhotosIntent);
+        }
+    }
+
+    private void clearSelectedPhotos() {
+        //Eliminamos de la lista las fotos que se van a fechar
+        PhotosAdapter adapter = (PhotosAdapter) photosGrid.getAdapter();
+
+        for(String path : selectedPaths) {
+            adapter.removeImage(path);
+        }
+
+        adapter.notifyDataSetChanged();
+    }
+
+    private void checkImagesToProcessEmpty(PhotosAdapter adapter) {
+        if(adapter.isEmpty()) {
+            noPhotosTextView.setVisibility(View.VISIBLE);
+            processPhotosBtn.hide();
         }
     }
 }
