@@ -46,32 +46,11 @@ public class ProgressCircle extends LinearLayout {
 
     public void setActual(final Activity activity, final int actual) {
         if(total != 0) {
-            //Número de iteraciones que se deben ejecutar
-            final int diff = actual - this.actual;
-
-            //Una vuelta entera serán 5 s, es decir, 5000 ms
-            //Ponemos una cuenta atrás que se ejcutará cada 50 ms (por cada 1%),
-            //y hasta que llegue al progreso igual a actual
-            new CountDownTimer(diff * 50, 50) {
-                @Override
-                public void onTick(long millisUntilFinished) {
-                    activity.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            donutProgress.setProgress(donutProgress.getProgress() + 1);
-                        }
-                    });
-                }
-
-                @Override
-                public void onFinish() {
-                    double totalDouble = (double) total;
-                    double progress = (actual / totalDouble) * 100;
-                    donutProgress.setProgress((int) progress);
-                    progTv.setText(actual + "/" + total);
-                    ProgressCircle.this.actual = actual;
-                }
-            }.start();
+            double totalDouble = (double) total;
+            double progress = (actual / totalDouble) * 100;
+            donutProgress.setProgress((int) progress);
+            progTv.setText(actual + "/" + total);
+            ProgressCircle.this.actual = actual;
         }
     }
 }

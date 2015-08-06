@@ -1,5 +1,6 @@
 package fergaral.datetophoto.fragments;
 
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
@@ -7,6 +8,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import fergaral.datetophoto.R;
 
@@ -29,6 +31,14 @@ public class AboutFragment extends Fragment {
         if(appCompatActivity.getSupportActionBar() != null)
             appCompatActivity.getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+        TextView versionTv = (TextView) rootView.findViewById(R.id.tvabout2);
+        String versionName = "";
+        try {
+            versionName = getActivity().getPackageManager().getPackageInfo(getActivity().getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        versionTv.setText(versionName);
         return rootView;
     }
 }

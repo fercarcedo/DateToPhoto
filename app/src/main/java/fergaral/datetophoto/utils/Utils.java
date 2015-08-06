@@ -28,6 +28,7 @@ import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.twmacinta.util.MD5;
 
@@ -517,5 +518,9 @@ public class Utils {
     public static void unlockOrientation(Activity activity) {
         //Desbloqueamos la rotación
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+    }
+
+    public static void showToast(Context context, String text) {
+        Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
     }
  }

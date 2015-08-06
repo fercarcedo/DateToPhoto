@@ -17,6 +17,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import fergaral.datetophoto.activities.PhotosActivity;
+import fergaral.datetophoto.activities.SettingsActivity;
+
 /**
  * A {@link Preference} that displays a list of entries as
  * a dialog and allows multiple selections
@@ -107,6 +110,8 @@ public class FoldersListPreference extends ListPreference {
 
                                 setFoldersSummary();
 
+                                SettingsActivity.SHOULD_REFRESH = true;
+                                
                                 return true;
                             }
                         }).build().show();

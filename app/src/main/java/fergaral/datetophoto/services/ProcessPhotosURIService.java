@@ -288,32 +288,18 @@ public class ProcessPhotosURIService extends IntentService {
                         exifDate = exifDate.replaceAll(" ", "").replaceAll(":", "_");
                     }else{
                         //Si no hay fecha EXIF, le ponemos de nombre la fecha de hoy, con el mismo formato
-                        Date currentDate = new Date();
-                        Calendar calendar = Calendar.getInstance();
-                        calendar.setTime(currentDate);
-                        exifDate = calendar.get(Calendar.YEAR) + "" + (calendar.get(Calendar.MONTH) + 1) + ""
-                                + calendar.get(Calendar.DAY_OF_MONTH) + "" + calendar.get(Calendar.HOUR_OF_DAY)
-                                + calendar.get(Calendar.MINUTE) + "" + calendar.get(Calendar.SECOND);
+                        exifDate = getCurrentDate("");
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
 
                 if(exifDate.equals("")) {
-                    Date currentDate = new Date();
-                    Calendar calendar = Calendar.getInstance();
-                    calendar.setTime(currentDate);
-                    exifDate = calendar.get(Calendar.YEAR) + "" + (calendar.get(Calendar.MONTH) + 1) + ""
-                            + calendar.get(Calendar.DAY_OF_MONTH) + "" + calendar.get(Calendar.HOUR_OF_DAY)
-                            + calendar.get(Calendar.MINUTE) + "" + calendar.get(Calendar.SECOND);
+                    exifDate = getCurrentDate("");
                 }
 
                 if(date.equals("")) {
-                    Date currentDate = new Date();
-                    Calendar calendar = Calendar.getInstance();
-                    calendar.setTime(currentDate);
-                    date = calendar.get(Calendar.DAY_OF_MONTH) + "/" + (calendar.get(Calendar.MONTH) + 1)
-                            + "/" + calendar.get(Calendar.YEAR);
+                    date = getCurrentDate("/");
                 }
 
                 Bitmap bitmap2 = writeDateOnBitmap(myBitmap, date);
@@ -398,7 +384,9 @@ public class ProcessPhotosURIService extends IntentService {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(currentDate);
 
-        return calendar.get(Calendar.DAY_OF_MONTH) + "/" + (calendar.get(Calendar.MONTH) + 1) + "/" + calendar.get(Calendar.YEAR);
+        return getStringOfNumber(calendar.get(Calendar.DAY_OF_MONTH)) + "/" +
+                getStringOfNumber(calendar.get(Calendar.MONTH) + 1) + "/" +
+                getStringOfNumber(calendar.get(Calendar.YEAR));
     }
 
     public void showProgress(float prog) {
@@ -655,5 +643,17 @@ public class ProcessPhotosURIService extends IntentService {
             options.inSampleSize = reduction;
 
         return BitmapFactory.decodeStream(c.getContentResolver().openInputStream(uri), null, options);
+    }
+
+    private String getCurrentDate(String separator) {
+        Date currentDate = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        return getStringOfNumber(calendar.get(Calendar.YEAR)) + separator
+                + getStringOfNumber(calendar.get(Calendar.MONTH) + 1) + separator
+                + getStringOfNumber(calendar.get(Calendar.DAY_OF_MONTH)) + separator +
+                getStringOfNumber(calendar.get(Calendar.HOUR_OF_DAY))
+                + getStringOfNumber(calendar.get(Calendar.MINUTE)) + separator
+                + getStringOfNumber(calendar.get(Calendar.SECOND));
     }
 }

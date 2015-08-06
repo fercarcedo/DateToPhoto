@@ -39,13 +39,22 @@ public class AboutActivity extends AppCompatActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         switch(item.getItemId()) {
             case android.R.id.home: {
-                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-                    finishAfterTransition();
-                else
-                    finish();
+                onBackPressed();
                 return true;
             }
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+
+        PhotosActivity.SHOULD_REFRESH_GRID = false;
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            finishAfterTransition();
+        else
+            finish();
     }
 }

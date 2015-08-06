@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.ContactsContract;
 import android.support.v4.app.NotificationCompat;
 
 import com.github.machinarius.preferencefragment.PreferenceFragment;
@@ -15,8 +16,10 @@ import java.util.ArrayList;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.MyActivity;
+import fergaral.datetophoto.activities.PhotosActivity;
 import fergaral.datetophoto.utils.FoldersListPreference;
 import fergaral.datetophoto.utils.PhotoUtils;
+import fergaral.datetophoto.utils.Utils;
 
 public class SettingsFragment extends PreferenceFragment {
     @Override
@@ -31,7 +34,6 @@ public class SettingsFragment extends PreferenceFragment {
             String[] entryValues = (String[]) cameraImages.toArray();
             listPreference.setEntries(entries);
             listPreference.setEntryValues(entryValues);*/
-
 
         FoldersListPreference listPreference = (FoldersListPreference) findPreference(getString(R.string.pref_folderstoprocess_key));
         ArrayList<String> folderNames = PhotoUtils.getFolders(getActivity());

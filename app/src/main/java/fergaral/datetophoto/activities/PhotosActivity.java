@@ -2,11 +2,9 @@ package fergaral.datetophoto.activities;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.content.ContentValues;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Rect;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -15,10 +13,8 @@ import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
@@ -28,16 +24,14 @@ import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.bumptech.glide.Glide;
-import com.github.lzyzsd.circleprogress.DonutProgress;
 import com.software.shell.fab.ActionButton;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Queue;
-import java.util.prefs.PreferenceChangeEvent;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.db.DatabaseHelper;
@@ -54,6 +48,8 @@ import fergaral.datetophoto.utils.Utils;
 public class PhotosActivity extends AppCompatActivity implements ProgressChangedListener {
 
     public static final String EXTRA_IMAGE_URI = "fergaraldatetophotoextraimageuri";
+    public static boolean SHOULD_REFRESH_GRID = false;
+    public static boolean IS_PROCESSING = false;
 
     private GridView photosGrid;
     private ArrayList<String> selectedPaths;
@@ -66,6 +62,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private TextView datestampingPhotosTv;
     private ProgressBar loadingBar;
     private TextView noPhotosTextView;
+    private AsyncTask loadPhotosTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +72,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         Toolbar toolbar = (Toolbar) findViewById(R.id.tool_bar);
         setSupportActionBar(toolbar);
 
-
+        noPhotosTextView = (TextView) findViewById(R.id.nophotostv);
         mNumberOfColumns = Utils.landscape(PhotosActivity.this) ? 5 : 3;
         processPhotosBtn = (ActionButton) findViewById(R.id.btnProcessSelectedPhotos);
         loadingBar = (ProgressBar) findViewById(R.id.loadingPhotosProgressBar);
@@ -131,11 +128,13 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             @Override
             public void onClick(View v) {
 
+                selectAll();
+
                 clearSelectedPhotos();
                 processPhotosBtn.hide();
 
                 //Fechamos todas las fotos
-                Utils.startProcessPhotosService(PhotosActivity.this, PhotosActivity.this, null);
+                Utils.startProcessPhotosService(PhotosActivity.this, PhotosActivity.this, selectedPaths);
 
                 //Ocultamos los botones ("pulsamos" el FAB)
                 clickBigFAB();
@@ -145,7 +144,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         selectedPaths = new ArrayList<>();
         photosGrid = (GridView) findViewById(R.id.photos_grid);
 
-        new ImagesToProcessTask().execute(new PhotoUtils(this).getCameraImages());
+        loadPhotosTask = new ImagesToProcessTask().execute();
 
         Intent intent = getIntent();
 
@@ -168,7 +167,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
                 @Override
                 public void reportTotal(final int total) {
-
+                    datestampingPhotosTv.setText("Buscando fotos ya fechadas...");
+                    showProgress(total);
                 }
 
                 @Override
@@ -178,7 +178,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
                 @Override
                 public void reportEnd(boolean fromActionShare) {
-
+                    hideProgress();
                 }
             });
 
@@ -216,15 +216,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
     @Override
     public void reportTotal(final int total) {
-        photosGrid.setVisibility(View.INVISIBLE);
-        loadingBar.setVisibility(View.INVISIBLE);
-
-        Utils.lockOrientation(this);
-
-        //Establecemos el total de fotos a fechar
-        progressCircle.setTotal(total);
-        progressCircle.setVisibility(View.VISIBLE);
-        datestampingPhotosTv.setVisibility(View.VISIBLE);
+        showProgress(total);
 
         selectedPaths = new ArrayList<>();
     }
@@ -253,10 +245,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             }
         });
 
-        Utils.unlockOrientation(this);
-        photosGrid.setVisibility(View.VISIBLE);
-        progressCircle.setVisibility(View.INVISIBLE);
-        datestampingPhotosTv.setVisibility(View.INVISIBLE);
+        hideProgress();
 
         PhotosAdapter adapter = (PhotosAdapter) photosGrid.getAdapter();
         if(adapter.isEmpty()) {
@@ -331,6 +320,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         public void removeImage(String image) {
             images.remove(image);
         }
+        public String getImage(int position) {
+            return images.get(position);
+        }
     }
 
     private void clickBigFAB() {
@@ -395,15 +387,26 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         wasFABPressed = !wasFABPressed;
     }
 
-    public class ImagesToProcessTask extends AsyncTask<ArrayList<String>, Void, ArrayList<String>> {
+    public class ImagesToProcessTask extends AsyncTask<Void, Void, ArrayList<String>> {
         @Override
-        protected ArrayList<String> doInBackground(ArrayList<String>... images) {
+        protected void onPreExecute() {
+            super.onPreExecute();
+            loadingBar.setVisibility(View.VISIBLE);
+            photosGrid.setVisibility(View.INVISIBLE);
+            noPhotosTextView.setVisibility(View.INVISIBLE);
+            processPhotosBtn.hide();
+        }
+
+        @Override
+        protected ArrayList<String> doInBackground(Void... voids) {
             SQLiteDatabase photosDb = new DatabaseHelper(PhotosActivity.this).getReadableDatabase();
+
+            ArrayList<String> cameraImages = new PhotoUtils(PhotosActivity.this).getCameraImages();
 
             //Obtenemos las fotos sin fechar de entre las que hay que procesar, ya que es más rápido identificar las que hay
             //que procesar, que no las que están sin fechars
             ArrayList<String> imagesToProcess = Utils.getPhotosWithoutDate(PhotosActivity.this,
-                    Utils.getImagesToProcess(PhotosActivity.this, images[0]), photosDb);
+                    Utils.getImagesToProcess(PhotosActivity.this, cameraImages), photosDb);
 
             photosDb.close();
 
@@ -414,19 +417,16 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         protected void onPostExecute(ArrayList<String> imagesToProcess) {
             super.onPostExecute(imagesToProcess);
 
+            photosGrid.setVisibility(View.VISIBLE);
             photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
             photosGrid.setNumColumns(mNumberOfColumns);
 
-            loadingBar = (ProgressBar) findViewById(R.id.loadingPhotosProgressBar);
-
-            if(loadingBar.getVisibility() == View.VISIBLE)
+            if (loadingBar.getVisibility() == View.VISIBLE)
                 loadingBar.setVisibility(View.INVISIBLE);
 
-            noPhotosTextView = (TextView) findViewById(R.id.nophotostv);
-
-            if(imagesToProcess.size() == 0) {
+            if (imagesToProcess.size() == 0) {
                 noPhotosTextView.setVisibility(View.VISIBLE);
-            }else{
+            } else {
                 processPhotosBtn.show();
             }
         }
@@ -485,9 +485,62 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     private void checkImagesToProcessEmpty(PhotosAdapter adapter) {
-        if(adapter.isEmpty()) {
+        if (adapter.isEmpty()) {
             noPhotosTextView.setVisibility(View.VISIBLE);
             processPhotosBtn.hide();
         }
+    }
+
+    private void showProgress(int total) {
+        PhotosActivity.IS_PROCESSING = true;
+
+        photosGrid.setVisibility(View.INVISIBLE);
+        loadingBar.setVisibility(View.INVISIBLE);
+
+        Utils.lockOrientation(this);
+
+        //Establecemos el total de fotos a fechar
+        progressCircle.setTotal(total);
+        progressCircle.setVisibility(View.VISIBLE);
+        datestampingPhotosTv.setVisibility(View.VISIBLE);
+    }
+
+    private void hideProgress() {
+        PhotosActivity.IS_PROCESSING = false;
+
+        Utils.unlockOrientation(this);
+        photosGrid.setVisibility(View.VISIBLE);
+        progressCircle.setVisibility(View.INVISIBLE);
+        datestampingPhotosTv.setVisibility(View.INVISIBLE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        PhotosActivity.SHOULD_REFRESH_GRID = true;
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+
+        if(!PhotosActivity.IS_PROCESSING && PhotosActivity.SHOULD_REFRESH_GRID) {
+            //Actualizamos la lista de fotos
+            if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
+                //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
+                loadPhotosTask.cancel(true);
+            }
+
+            loadPhotosTask = new ImagesToProcessTask().execute();
+        }
+
+        PhotosActivity.SHOULD_REFRESH_GRID = false;
+    }
+
+    private void selectAll() {
+        PhotosAdapter adapter = (PhotosAdapter) photosGrid.getAdapter();
+
+        for(int i=0; i<adapter.getCount(); i++)
+            selectedPaths.add(adapter.getImage(i));
     }
 }

@@ -3,9 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".PhotosActivity" >
 
-    <item android:id="@+id/action_diskspaceusage"
+   <!--<item android:id="@+id/action_diskspaceusage"
         android:title="Espacio en disco"
-        app:showAsAction="never" />
+        app:showAsAction="never" />-->
 
     <item android:id="@+id/action_settings"
         android:title="@string/action_settings"

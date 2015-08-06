@@ -2,7 +2,6 @@
 <resources>
 
     <string name="app_name">Date To Photo</string>
-    <string name="app_version">0.10.0</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Ajustes</string>
     <string name="pref_active_title">Procesar fotos automáticamente</string>
