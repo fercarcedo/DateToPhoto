@@ -4,7 +4,7 @@
         android:key="@string/pref_overwrite_key"
         android:title="@string/pref_overwrite_title"
         android:summary="@string/pref_overwrite_summary"
-        android:defaultValue="false" />
+        android:defaultValue="true" />
 
     <fergaral.datetophoto.utils.SwitchPreferenceCompat
         android:key="@string/pref_active_key"

@@ -33,6 +33,11 @@ import android.util.Log;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
 
+import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -285,7 +290,7 @@ public class ProcessPhotosURIService extends IntentService {
                     exifDate = exifInterface.getTagStringValue(ExifInterface.TAG_DATE_TIME);
 
                     if(exifDate != null) {
-                        exifDate = exifDate.replaceAll(" ", "").replaceAll(":", "_");
+                        exifDate = exifDate.replaceAll(" ", "").replaceAll(":", "");
                     }else{
                         //Si no hay fecha EXIF, le ponemos de nombre la fecha de hoy, con el mismo formato
                         exifDate = getCurrentDate("");
@@ -299,7 +304,7 @@ public class ProcessPhotosURIService extends IntentService {
                 }
 
                 if(date.equals("")) {
-                    date = getCurrentDate("/");
+                    date = getCurrentLocalizedDate();
                 }
 
                 Bitmap bitmap2 = writeDateOnBitmap(myBitmap, date);
@@ -373,20 +378,17 @@ public class ProcessPhotosURIService extends IntentService {
 
             return dateString;*/
 
-            String year = attribute.substring(0, 4);
-            String month = attribute.substring(5, 7);
-            String day = attribute.substring(8, 10);
+            int year = Integer.parseInt(attribute.substring(0, 4));
+            int month = Integer.parseInt(attribute.substring(5, 7));
+            int day = Integer.parseInt(attribute.substring(8, 10));
 
-            return day + "/" + month + "/" + year;
+            Calendar cal = Calendar.getInstance();
+            cal.set(year, month-1, day);
+
+            return Utils.getFormattedDate(cal.getTime());
         }
 
-        Date currentDate = new Date();
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(currentDate);
-
-        return getStringOfNumber(calendar.get(Calendar.DAY_OF_MONTH)) + "/" +
-                getStringOfNumber(calendar.get(Calendar.MONTH) + 1) + "/" +
-                getStringOfNumber(calendar.get(Calendar.YEAR));
+        return getCurrentLocalizedDate();
     }
 
     public void showProgress(float prog) {
@@ -652,8 +654,12 @@ public class ProcessPhotosURIService extends IntentService {
         return getStringOfNumber(calendar.get(Calendar.YEAR)) + separator
                 + getStringOfNumber(calendar.get(Calendar.MONTH) + 1) + separator
                 + getStringOfNumber(calendar.get(Calendar.DAY_OF_MONTH)) + separator +
-                getStringOfNumber(calendar.get(Calendar.HOUR_OF_DAY))
+                getStringOfNumber(calendar.get(Calendar.HOUR_OF_DAY)) + separator
                 + getStringOfNumber(calendar.get(Calendar.MINUTE)) + separator
                 + getStringOfNumber(calendar.get(Calendar.SECOND));
+    }
+
+    private String getCurrentLocalizedDate() {
+        return Utils.getFormattedDate(new Date());
     }
 }

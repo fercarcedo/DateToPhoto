@@ -32,6 +32,8 @@ import android.widget.Toast;
 
 import com.twmacinta.util.MD5;
 
+import org.joda.time.LocalDate;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,7 +42,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.zip.Adler32;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
@@ -54,7 +60,7 @@ import fergaral.datetophoto.services.ProcessPhotosURIService;
 /**
  * Created by Parejúa on 30/03/2015.
  */
-public class Utils {
+public final class Utils {
 
     public static void write(String path, String text) {
 
@@ -522,5 +528,21 @@ public class Utils {
 
     public static void showToast(Context context, String text) {
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
+    }
+
+    public static String getFormattedDate(Date date) {
+        DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
+        if (df instanceof SimpleDateFormat)
+        {
+            SimpleDateFormat sdf = (SimpleDateFormat) df;
+            // To show Locale specific short date expression with full year
+            String pattern = sdf.toPattern().replaceAll("y+","yyyy")
+                                            .replaceAll("d+", "dd")
+                                            .replaceAll("M+", "MM");
+            sdf.applyPattern(pattern);
+            return sdf.format(date);
+        }
+
+        return df.format(date);
     }
  }

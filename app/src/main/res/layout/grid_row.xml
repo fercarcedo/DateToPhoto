@@ -6,6 +6,7 @@
     <fergaral.datetophoto.utils.TickedImageView
         android:id="@+id/thumb"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:background="?attr/selectableItemBackground" />
 
 </RelativeLayout>

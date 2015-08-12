@@ -2,17 +2,22 @@ package fergaral.datetophoto.activities;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
+import android.text.method.HideReturnsTransformationMethod;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -37,6 +42,7 @@ import fergaral.datetophoto.R;
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.services.RegisterPhotoURIIntoDBService;
+import fergaral.datetophoto.utils.CircularProgressWheel;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.ProgressCircle;
 import fergaral.datetophoto.utils.TickedImageView;
@@ -60,9 +66,10 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private CardView cardSpeedDial1, cardSpeedDial2;
     private ProgressCircle progressCircle;
     private TextView datestampingPhotosTv;
-    private ProgressBar loadingBar;
+    private CircularProgressWheel loadingBar;
     private TextView noPhotosTextView;
     private AsyncTask loadPhotosTask;
+    private boolean hideNoPhotosTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,10 +79,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         Toolbar toolbar = (Toolbar) findViewById(R.id.tool_bar);
         setSupportActionBar(toolbar);
 
+        PhotoUtils.selectAllFoldersOnFirstUse(this);
+
         noPhotosTextView = (TextView) findViewById(R.id.nophotostv);
         mNumberOfColumns = Utils.landscape(PhotosActivity.this) ? 5 : 3;
         processPhotosBtn = (ActionButton) findViewById(R.id.btnProcessSelectedPhotos);
-        loadingBar = (ProgressBar) findViewById(R.id.loadingPhotosProgressBar);
+        loadingBar = (CircularProgressWheel) findViewById(R.id.loadingPhotosProgressBar);
         fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
         coverRl = (RelativeLayout) findViewById(R.id.photos_cover_rl);
@@ -173,7 +182,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
                 @Override
                 public void onProgressChanged(final int progress) {
-
+                    progressCircle.setActual(PhotosActivity.this, progress);
                 }
 
                 @Override
@@ -204,7 +213,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 Utils.startActivityCompat(this, new Intent(this, SettingsActivity.class));
                 break;
             case R.id.action_about:
-                Utils.startActivityCompat(this, new Intent(this, AboutActivity.class));
+                showAboutDialog();
                 break;
             case R.id.action_tutorial:
                 Utils.startActivityCompat(this, new Intent(this, TutorialActivity.class));
@@ -248,10 +257,13 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         hideProgress();
 
         PhotosAdapter adapter = (PhotosAdapter) photosGrid.getAdapter();
-        if(adapter.isEmpty()) {
-            noPhotosTextView.setVisibility(View.VISIBLE);
-        }else{
-            processPhotosBtn.show();
+
+        if(adapter != null) {
+            if (adapter.isEmpty() && !hideNoPhotosTextView) {
+                noPhotosTextView.setVisibility(View.VISIBLE);
+            } else if (!adapter.isEmpty()) {
+                processPhotosBtn.show();
+            }
         }
     }
 
@@ -417,17 +429,24 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         protected void onPostExecute(ArrayList<String> imagesToProcess) {
             super.onPostExecute(imagesToProcess);
 
-            photosGrid.setVisibility(View.VISIBLE);
-            photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
-            photosGrid.setNumColumns(mNumberOfColumns);
+            if(!PhotosActivity.IS_PROCESSING) {
+                photosGrid.setVisibility(View.VISIBLE);
+                photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
+                photosGrid.setNumColumns(mNumberOfColumns);
+            }
 
             if (loadingBar.getVisibility() == View.VISIBLE)
                 loadingBar.setVisibility(View.INVISIBLE);
 
-            if (imagesToProcess.size() == 0) {
-                noPhotosTextView.setVisibility(View.VISIBLE);
-            } else {
-                processPhotosBtn.show();
+            if(hideNoPhotosTextView)
+                hideNoPhotosTextView = false;
+
+            if(!PhotosActivity.IS_PROCESSING) {
+                if (imagesToProcess.size() == 0) {
+                    noPhotosTextView.setVisibility(View.VISIBLE);
+                } else if (imagesToProcess.size() != 0) {
+                    processPhotosBtn.show();
+                }
             }
         }
     }
@@ -485,7 +504,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     private void checkImagesToProcessEmpty(PhotosAdapter adapter) {
-        if (adapter.isEmpty()) {
+        if (adapter.isEmpty() && !hideNoPhotosTextView) {
             noPhotosTextView.setVisibility(View.VISIBLE);
             processPhotosBtn.hide();
         }
@@ -512,6 +531,18 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         photosGrid.setVisibility(View.VISIBLE);
         progressCircle.setVisibility(View.INVISIBLE);
         datestampingPhotosTv.setVisibility(View.INVISIBLE);
+
+        if(PhotosActivity.SHOULD_REFRESH_GRID) {
+            //Actualizamos la lista de fotos
+            if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
+                //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
+                loadPhotosTask.cancel(true);
+            }
+
+            loadPhotosTask = new ImagesToProcessTask().execute();
+            PhotosActivity.SHOULD_REFRESH_GRID = false;
+            hideNoPhotosTextView = true;
+        }
     }
 
     @Override
@@ -532,9 +563,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             }
 
             loadPhotosTask = new ImagesToProcessTask().execute();
+            PhotosActivity.SHOULD_REFRESH_GRID = false;
         }
-
-        PhotosActivity.SHOULD_REFRESH_GRID = false;
     }
 
     private void selectAll() {
@@ -542,5 +572,37 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         for(int i=0; i<adapter.getCount(); i++)
             selectedPaths.add(adapter.getImage(i));
+    }
+
+    private void showAboutDialog() {
+        new AboutDialogFragment().show(getSupportFragmentManager(), AboutDialogFragment.class.getSimpleName());
+    }
+
+    public static class AboutDialogFragment extends DialogFragment {
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            String versionName = "";
+            try {
+                versionName = getActivity().getPackageManager().getPackageInfo(getActivity().getPackageName(), 0).versionName;
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
+
+            return new MaterialDialog.Builder(getActivity())
+                    .title("Date To Photo " + versionName)
+                    .content("Desarrollada por Fernando García Álvarez\nTesting por Sergio Artidiello González")
+                    .positiveText("Aceptar")
+                    .iconRes(R.drawable.ic_launcher)
+                    .show();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if(wasFABPressed)
+            clickBigFAB();
+        else
+            super.onBackPressed();
     }
 }

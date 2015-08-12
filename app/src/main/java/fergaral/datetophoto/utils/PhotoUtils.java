@@ -2,6 +2,7 @@ package fergaral.datetophoto.utils;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,6 +14,7 @@ import android.media.ExifInterface;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.widget.Toast;
 
@@ -28,10 +30,12 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+import fergaral.datetophoto.R;
+
 /**
  * Created by Parejúa on 02/11/2014.
  */
-public class PhotoUtils {
+public final class PhotoUtils {
 
     private Context context;
     private MediaScannerConnection msConn;
@@ -456,5 +460,30 @@ public class PhotoUtils {
 
         file.delete();
         MediaScannerConnection.scanFile(context, new String[]{filePath}, null, null);
+    }
+
+    public static void selectAllFolders(Context context) {
+        ArrayList<String> folderNames = PhotoUtils.getFolders(context);
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for(String folderName : folderNames) {
+            stringBuilder.append(folderName).append(FoldersListPreference.SEPARATOR);
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(context.getString(R.string.pref_folderstoprocess_key), stringBuilder.toString());
+        editor.apply();
+    }
+
+    public static void selectAllFoldersOnFirstUse(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+
+        if(prefs.getBoolean("firstuse", true))
+            selectAllFolders(context);
+
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("firstuse", false);
+        editor.apply();
     }
 }

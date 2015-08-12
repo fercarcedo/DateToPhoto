@@ -30,6 +30,9 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormat;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -37,6 +40,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -203,6 +208,8 @@ public class ProcessPhotosService extends IntentService {
                     if (imageSize >= freeMemory) {
                         wasLarge = true;
                     }
+
+                    keepLargePhoto = keepLargePhoto && wasLarge;
 
                     while (imageSize >= freeMemory) {
                         imageWidth /= 1.15;
@@ -377,21 +384,20 @@ public class ProcessPhotosService extends IntentService {
 
             return dateString;*/
 
-           String year = attribute.substring(0, 4);
-           String month = attribute.substring(5, 7);
-           String day = attribute.substring(8, 10);
+           int year = Integer.parseInt(attribute.substring(0, 4));
+           int month = Integer.parseInt(attribute.substring(5, 7));
+           int day = Integer.parseInt(attribute.substring(8, 10));
 
-           return day + "/" + month + "/" + year;
+           //return day + "/" + month + "/" + year;
+
+            //Return a localized date String
+            Calendar cal = Calendar.getInstance();
+            cal.set(year, month-1, day);
+
+            return Utils.getFormattedDate(cal.getTime());
         }
 
-        Date lastModDate = new Date(imgFile.lastModified());
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(lastModDate);
-        String year = getStringOfNumber(cal.get(Calendar.YEAR));
-        String month = getStringOfNumber(cal.get(Calendar.MONTH) + 1);
-        String day = getStringOfNumber(cal.get(Calendar.DAY_OF_MONTH));
-
-        return day + "/" + month + "/" + year;
+        return Utils.getFormattedDate(new Date(imgFile.lastModified()));
     }
 
     public void showProgress(float prog) {
@@ -445,9 +451,10 @@ public class ProcessPhotosService extends IntentService {
         //int x = (b.getWidth() - bounds.width()) / 2;
         //int y = (b.getHeight() + bounds.height()) / 2;
 
-        double margin = (b.getWidth() * 0.2) / 10;
-        int x = (int) (b.getWidth() - bounds.width() - margin);
-        int y = b.getHeight() - bounds.height();
+        double marginWidth = (b.getWidth() * 0.2) / 10;
+        double marginHeight = (b.getHeight() * 0.4) / 10;
+        int x = (int) (b.getWidth() - bounds.width() - marginWidth);
+        int y = (int) (b.getHeight() - marginHeight);
 
         switch(orientation)
         {
@@ -455,9 +462,8 @@ public class ProcessPhotosService extends IntentService {
             {
                 canvas.save();
 
-                margin = (b.getHeight() * 0.2) / 10;
                 x = bounds.height(); //altotexto
-                y = (int) (b.getHeight() - bounds.width() - margin); //alto - anchotexto
+                y = (int) (b.getHeight() - bounds.width() - marginHeight); //alto - anchotexto
 
                 canvas.rotate(-270, x, y);
 
@@ -470,12 +476,11 @@ public class ProcessPhotosService extends IntentService {
             {
                 canvas.save();
 
-                margin = (b.getHeight() * 0.2) / 10;
                 /*x = b.getWidth() - bounds.height(); //ancho - altotexto
                 y = (int) (bounds.width() + margin); //anchotexto*/
 
                 x = b.getWidth() - bounds.height(); //ancho - altotexto
-                y = (int) (bounds.width() + margin); //anchotexto
+                y = (int) (bounds.width() + marginHeight); //anchotexto
 
                 canvas.rotate(-90, x, y);
 
@@ -489,8 +494,8 @@ public class ProcessPhotosService extends IntentService {
             {
                 canvas.save();
 
-                x = (int) margin;
-                y = 0;
+                x = (int) (bounds.width() + marginWidth);
+                y = (int) marginHeight;
 
                 canvas.rotate(-180, x, y);
 

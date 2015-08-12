@@ -44,12 +44,12 @@
         materialdesign:animate="true"
         materialdesign:iconDrawable="@drawable/ic_launcher" />-->
 
-    <ProgressBar
-        android:indeterminate="true"
+    <fergaral.datetophoto.utils.CircularProgressWheel
+        fab:matProg_progressIndeterminate="true"
+        fab:matProg_barColor="@color/colorAccent"
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:id="@+id/loadingPhotosProgressBar"
-        style="?android:attr/progressBarStyle"
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true" />
 
