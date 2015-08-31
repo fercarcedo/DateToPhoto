@@ -2,6 +2,7 @@ package fergaral.datetophoto.services;
 
 import android.app.IntentService;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import fergaral.datetophoto.R;
+import fergaral.datetophoto.activities.PhotosActivity;
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.receivers.PhotoRenamedAddedReceiver;
 import fergaral.datetophoto.utils.PhotoUtils;
@@ -33,11 +35,16 @@ public class DetectAlreadyProcessedPhotosService extends IntentService {
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
                 .setContentTitle("Date To Photo")
                 .setSmallIcon(R.drawable.ic_launcher)
+                .setContentIntent(PendingIntent.getActivity(
+                        this,
+                        0,
+                        new Intent(this, PhotosActivity.class),
+                        PendingIntent.FLAG_UPDATE_CURRENT))
                 .setContentText("A")
                 .setTicker("Usb desconectado");
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(1, notificationBuilder.build());
+        //notificationManager.notify(1, notificationBuilder.build());
 
         SQLiteDatabase photosDb = new DatabaseHelper(this).getWritableDatabase();
 

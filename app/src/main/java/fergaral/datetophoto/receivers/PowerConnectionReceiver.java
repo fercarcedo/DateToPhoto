@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
 import fergaral.datetophoto.services.ProcessPhotosService;
@@ -47,6 +48,12 @@ public class PowerConnectionReceiver extends WakefulBroadcastReceiver {
         if(intent.getAction().equals(Intent.ACTION_POWER_CONNECTED)) {
             Intent serviceIntent = new Intent(context, ProcessPhotosService.class);
             startWakefulService(context, serviceIntent);
+        }else if(intent.getAction().equals(Intent.ACTION_POWER_DISCONNECTED)) {
+            //Cancelamos el servicio, si se está lanzó al poner el dispositivo a cargar
+            Intent cancelIntent = new Intent(ProcessPhotosService.ACTION_CANCEL_CHARGER_DISCONNECTED);
+            cancelIntent.putExtra(ProcessPhotosService.CANCEL_SERVICE, true);
+
+            LocalBroadcastManager.getInstance(context).sendBroadcast(cancelIntent);
         }
 
         if(intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED))

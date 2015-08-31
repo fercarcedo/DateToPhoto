@@ -4,6 +4,7 @@
     <color name="colorPrimary">#2196F3</color>
     <color name="colorPrimaryDark">#1976D2</color>
     <color name="colorAccent">#1de9b6</color>
+    <color name="fabRippleColor">#00796b</color>
     <color name="fab_color_pressed">#00bfa5</color>
     <color name="tutorialBackground">#42A5F5</color>
     <color name="about_text_color">#FFFFFF</color>

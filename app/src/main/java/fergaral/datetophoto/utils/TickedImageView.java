@@ -37,7 +37,7 @@ public class TickedImageView extends ImageView {
     }
 
     private void init() {
-        setOnClickListener(new View.OnClickListener() {
+        super.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 setSelected(!isSelected());
@@ -75,7 +75,8 @@ public class TickedImageView extends ImageView {
         }
     }
 
-    public void setOnImageClickListener(View.OnClickListener listener) {
+    @Override
+    public void setOnClickListener(OnClickListener listener) {
         onImageClickListener = listener;
     }
 

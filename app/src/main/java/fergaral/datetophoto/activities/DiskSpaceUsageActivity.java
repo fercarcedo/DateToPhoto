@@ -139,4 +139,16 @@ public class DiskSpaceUsageActivity extends AppCompatActivity {
     {
         new DeleteImagesTask().execute(new PhotoUtils(this).getCameraImages());
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+
+        PhotosActivity.SHOULD_REFRESH_GRID = false;
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            finishAfterTransition();
+        else
+            finish();
+    }
 }

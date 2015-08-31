@@ -18,6 +18,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
 import android.text.method.HideReturnsTransformationMethod;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,7 +32,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
+import com.andexert.library.RippleView;
 import com.bumptech.glide.Glide;
 import com.software.shell.fab.ActionButton;
 
@@ -72,7 +75,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private boolean hideNoPhotosTextView;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photos);
 
@@ -153,47 +156,72 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         selectedPaths = new ArrayList<>();
         photosGrid = (GridView) findViewById(R.id.photos_grid);
 
-        loadPhotosTask = new ImagesToProcessTask().execute();
-
-        Intent intent = getIntent();
-
-        //Verificamos si la aplicación se abrió desde el menú de compartir, y si se compartieron 1 o varias fotos
-        if(savedInstanceState == null) {
-            if (Intent.ACTION_SEND.equals(intent.getAction()))
-                handleSingleImage(intent);
-            else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction()))
-                handleMultipleImages(intent);
-        }
+        final Intent intent = getIntent();
 
         //Si es la primera vez que se abre la aplicación, buscamos si ya hay fotos sin fechar en el dispositivo
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean searchPhotos = prefs.getBoolean("searchPhotosFirstUse", true);
 
         if(searchPhotos) {
-            //Buscamos si hay fotos sin fechar
-            Utils.searchForAlreadyProcessedPhotos(this, new ProgressChangedListener() {
-                private int total;
+            //Mostramos un diálogo preguntando si usaron Date To Photo previamente
+            final MaterialDialog usedPreviouslyDialog = new MaterialDialog.Builder(this)
+                    .title("¿Has usado antes Date To Photo?")
+                    .content("Selecciona SÍ si en este dispositivo hay alguna foto fechada previamente con esta aplicación. "
+                    + "Si no hay, o no recuerdas haber usado Date To Photo, selecciona NO")
+                    .positiveText("Sí")
+                    .negativeText("No")
+                    .cancelable(false)
+                    .autoDismiss(true)
+                    .build();
 
+            usedPreviouslyDialog.getActionButton(DialogAction.POSITIVE).setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void reportTotal(final int total) {
-                    datestampingPhotosTv.setText("Buscando fotos ya fechadas...");
-                    showProgress(total);
-                }
+                public void onClick(View v) {
+                    usedPreviouslyDialog.dismiss();
 
-                @Override
-                public void onProgressChanged(final int progress) {
-                    progressCircle.setActual(PhotosActivity.this, progress);
-                }
+                    //Buscamos si hay fotos sin fechar
+                    Utils.searchForAlreadyProcessedPhotos(PhotosActivity.this, new ProgressChangedListener() {
+                        private int total;
 
-                @Override
-                public void reportEnd(boolean fromActionShare) {
-                    hideProgress();
+                        @Override
+                        public void reportTotal(final int total) {
+                            datestampingPhotosTv.setText("Buscando fotos ya fechadas...");
+                            showProgress(total);
+                        }
+
+                        @Override
+                        public void onProgressChanged(final int progress) {
+                            progressCircle.setActual(PhotosActivity.this, progress);
+                        }
+
+                        @Override
+                        public void reportEnd(boolean fromActionShare) {
+                            hideProgress();
+                            refreshGrid();
+
+                            checkSharedPhotos(savedInstanceState, intent);
+                        }
+                    });
+
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.putBoolean("searchPhotosFirstUse", false);
+                    editor.apply();
                 }
             });
 
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putBoolean("searchPhotosFirstUse", false);
-            editor.apply();
+            usedPreviouslyDialog.getActionButton(DialogAction.NEGATIVE).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    usedPreviouslyDialog.dismiss();
+
+                    loadPhotosTask = new ImagesToProcessTask().execute();
+                    checkSharedPhotos(savedInstanceState, intent);
+                }
+            });
+
+            usedPreviouslyDialog.show();
+        }else{
+            loadPhotosTask = new ImagesToProcessTask().execute();
         }
     }
 
@@ -306,9 +334,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             thumbV.setDrawingWidth(width);
 
             //Por si la TickedImageView fue reciclada, la desmarcamos
-            thumbV.setSelected(false);
+            thumbV.setSelected(selectedPaths.contains(images.get(position)));
 
-            thumbV.setOnImageClickListener(new View.OnClickListener() {
+            thumbV.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     TickedImageView view = (TickedImageView) v;
@@ -326,6 +354,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     .centerCrop()
                     .into(thumbV);
 
+            Log.d("TAG", images.get(position));
             return row;
         }
 
@@ -534,14 +563,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         if(PhotosActivity.SHOULD_REFRESH_GRID) {
             //Actualizamos la lista de fotos
-            if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
-                //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
-                loadPhotosTask.cancel(true);
-            }
-
-            loadPhotosTask = new ImagesToProcessTask().execute();
-            PhotosActivity.SHOULD_REFRESH_GRID = false;
-            hideNoPhotosTextView = true;
+            refreshGrid();
         }
     }
 
@@ -604,5 +626,26 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             clickBigFAB();
         else
             super.onBackPressed();
+    }
+
+    private void refreshGrid() {
+        if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
+            //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
+            loadPhotosTask.cancel(true);
+        }
+
+        loadPhotosTask = new ImagesToProcessTask().execute();
+        PhotosActivity.SHOULD_REFRESH_GRID = false;
+        hideNoPhotosTextView = true;
+    }
+
+    private void checkSharedPhotos(Bundle savedInstanceState, Intent intent) {
+        //Verificamos si la aplicación se abrió desde el menú de compartir, y si se compartieron 1 o varias fotos
+        if(savedInstanceState == null) {
+            if (Intent.ACTION_SEND.equals(intent.getAction()))
+                handleSingleImage(intent);
+            else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction()))
+                handleMultipleImages(intent);
+        }
     }
 }

@@ -32,8 +32,6 @@ import android.widget.Toast;
 
 import com.twmacinta.util.MD5;
 
-import org.joda.time.LocalDate;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -425,8 +423,7 @@ public final class Utils {
     }
 
     public static void searchForAlreadyProcessedPhotos(final Context context, final ProgressChangedListener listener) {
-        final ArrayList<String> imagesToProcess = getPhotosWithoutDate(
-                getImagesToProcess(context, new PhotoUtils(context).getCameraImages()));
+        final ArrayList<String> imagesToProcess = new PhotoUtils(context).getCameraImages();
 
         new AsyncTask<Void, Integer, Void>() {
 
@@ -478,6 +475,35 @@ public final class Utils {
                 listener.reportEnd(false);
             }
         }.execute();
+    }
+
+    public static void searchForAlreadyProcessedPhotos(Context context) {
+        ArrayList<String> imagesToProcess = new PhotoUtils(context).getCameraImages();
+
+        SQLiteDatabase db = new DatabaseHelper(context).getWritableDatabase();
+
+        int progress = 0;
+
+        for(String path : imagesToProcess) {
+            try {
+                ExifInterface exifInterface = new ExifInterface(path);
+
+                String makeExif = exifInterface.getAttribute(ExifInterface.TAG_MAKE);
+
+                if(makeExif != null && makeExif.startsWith("dtp-")) {
+                    ContentValues values = new ContentValues();
+                    values.put(DatabaseHelper.PATH_COLUMN, path);
+
+                    db.insert(DatabaseHelper.TABLE_NAME, null, values);
+                }
+
+                progress++;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        db.close();
     }
 
     public static boolean containsEXIFMAKEdtp(String path) {

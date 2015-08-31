@@ -92,4 +92,17 @@ public class NotificationUtils {
             setUpNotification(false, false, endText, "El proceso ha finalizado");
         }
     }
+
+    public void showStandAloneNotification(String text) {
+        boolean lollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
+
+        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext);
+        notifBuilder.setContentTitle("Date To Photo")
+                .setContentText(text)
+                .setSmallIcon(lollipop ? R.drawable.ic_dtp_transp : R.drawable.ic_launcher)
+                .setTicker(text);
+
+        NotificationManager notifManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+        notifManager.notify(NOTIFICATION_ID, notifBuilder.build());
+    }
 }

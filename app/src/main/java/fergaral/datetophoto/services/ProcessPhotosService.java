@@ -30,9 +30,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import org.joda.time.LocalDate;
-import org.joda.time.format.DateTimeFormat;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -45,10 +42,12 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.MyActivity;
 import fergaral.datetophoto.db.DatabaseHelper;
+import fergaral.datetophoto.exif.ExifTag;
 import fergaral.datetophoto.fragments.MaterialProgressDialogFragment;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.receivers.PowerConnectionReceiver;
@@ -58,6 +57,8 @@ import fergaral.datetophoto.utils.Utils;
 public class ProcessPhotosService extends IntentService {
 
     private static final int NOTIFICATION_ID = 1;
+    public static final String ACTION_CANCEL_CHARGER_DISCONNECTED = "cancel_charger_disconnected";
+    public static final String CANCEL_SERVICE = "cancel";
 
     private MediaScannerConnection msConn;
     private boolean onBackground = true;
@@ -65,6 +66,7 @@ public class ProcessPhotosService extends IntentService {
     private ProgressChangedListener secondListener;
     private String tempStr = "";
     private boolean dialogCancelled;
+    private boolean cancelledCharger;
     private NotificationCompat.Builder mNotifBuilder;
     private NotificationManager mNotifManager;
     private long mNotifStartTime;
@@ -136,6 +138,23 @@ public class ProcessPhotosService extends IntentService {
         boolean showNotif = sharedPreferences.getBoolean(getString(R.string.pref_shownotification_key), true);
         boolean keepLargePhoto = sharedPreferences.getBoolean(getString(R.string.pref_keeplargephoto_key), true);
 
+        if (onBackground) {
+            //Si estamos ejecutando esto mientras el dispositivo se está cargando, y hay 0 fotos en la base
+            //de datos (primer uso), buscamos fotos ya fechadas
+            SQLiteDatabase db = new DatabaseHelper(this).getReadableDatabase();
+            Cursor cursor = db.rawQuery("SELECT " + DatabaseHelper.PATH_COLUMN + " FROM " +
+                    DatabaseHelper.TABLE_NAME, null);
+
+            if (!cursor.moveToFirst()) {
+                cursor.close();
+
+                if(showNotif)
+                    mNotificationUtils.showStandAloneNotification("Buscando fotos ya fechadas...");
+
+                Utils.searchForAlreadyProcessedPhotos(this);
+            }
+        }
+
         if(showNotif)
             mNotificationUtils.showProgressNotification("Procesando tus fotos en segundo plano...");
 
@@ -171,9 +190,17 @@ public class ProcessPhotosService extends IntentService {
                 }
             }, new IntentFilter(MyActivity.INTENT_ACTION));
 
+            LocalBroadcastManager.getInstance(this).registerReceiver(new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if(onBackground)
+                        cancelledCharger = intent.getBooleanExtra(ProcessPhotosService.CANCEL_SERVICE, false);
+                }
+            }, new IntentFilter(ProcessPhotosService.ACTION_CANCEL_CHARGER_DISCONNECTED));
+
             for (String s : galleryImages) {
                 File imgFile = new File(s);
-                if (imgFile.exists() && !dialogCancelled) {
+                if (imgFile.exists() && !dialogCancelled && !cancelledCharger) {
 
 
                     //if (!Utils.isAlreadyDatestamped(imgFile)) {
@@ -182,10 +209,9 @@ public class ProcessPhotosService extends IntentService {
                     //File imgFileWithDate = new File(imgFile.getParentFile().getAbsolutePath() + "/dtp-" + imgFile.getName());
 
                     //if (!imgFileWithDate.exists() && Utils.processSelectedFolder(this, PhotoUtils.getParentFolderName(s))) {
-                    if (!Utils.containsEXIFMAKEdtp(s)) {
 
-                        //Primero obtenemos ancho y alto de la imagen
-                        BitmapFactory.Options options = new BitmapFactory.Options();
+                    //Primero obtenemos ancho y alto de la imagen
+                    BitmapFactory.Options options = new BitmapFactory.Options();
 
                     //Al establecerlo a true, el decodificador retornará null, pero options tendrá el ancho y alto
                     //de ese bitmap
@@ -270,6 +296,9 @@ public class ProcessPhotosService extends IntentService {
 
                     Bitmap bitmap2 = writeDateOnBitmap(myBitmap, date, rotation);
 
+                    //Este método sirve para comprobar la rotación con la segunda interfaz EXIF
+                    testEXIFDate(imgFile.getAbsolutePath());
+
                     myBitmap = null;
 
                             /*if(Utils.overwritePhotos(this)) {
@@ -299,15 +328,6 @@ public class ProcessPhotosService extends IntentService {
                             }*/
                     //}
                     //}
-                }else{
-                        //If the file contains the EXIF metadata, but wasn't included in the database (because we are getting
-                        //it here), add its path to the DB
-
-                        if(photosDb == null || !photosDb.isOpen())
-                            photosDb = new DatabaseHelper(this).getWritableDatabase();
-
-                        registerPhotoIntoDb(imgFile.getAbsolutePath());
-                    }
                 }
 
                 actual++;
@@ -452,7 +472,7 @@ public class ProcessPhotosService extends IntentService {
         //int y = (b.getHeight() + bounds.height()) / 2;
 
         double marginWidth = (b.getWidth() * 0.2) / 10;
-        double marginHeight = (b.getHeight() * 0.4) / 10;
+        double marginHeight = (b.getHeight() * 0.2) / 10;
         int x = (int) (b.getWidth() - bounds.width() - marginWidth);
         int y = (int) (b.getHeight() - marginHeight);
 
@@ -659,7 +679,7 @@ public class ProcessPhotosService extends IntentService {
             out.close();
             moveEXIFdata(imageFrom, imageFileName, keepOrientation);
 
-            if(imageFileName.getName().startsWith("dtpo-")) //Si se cumple, sobreescribimos
+            if(imageFileName.getName().startsWith("dtpo-"))  //Si se cumple, sobreescribimos
                 imageFileName.renameTo(new File(imageFileName.getParentFile().getAbsolutePath() + "/" + imageFileName.getName().substring(5)));
 
             scanPhoto(imageFileName.toString());
@@ -853,5 +873,58 @@ public class ProcessPhotosService extends IntentService {
         values.put(DatabaseHelper.PATH_COLUMN, path);
 
         photosDb.insert(DatabaseHelper.TABLE_NAME, null, values);
+    }
+
+    /**
+     * Este método obtiene la orientación de la foto con la otra interfaz EXIF y escribe otra línea
+     * en el archivo de logs con la información
+     *
+     * @param imgPath ruta de la imagen para obtener su orientación de EXIF
+     */
+    private void testEXIFDate(String imgPath) {
+        fergaral.datetophoto.exif.ExifInterface exifInterface = new fergaral.datetophoto.exif.ExifInterface();
+
+        try {
+            exifInterface.readExif(imgPath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Object orientationObj = exifInterface.getTagValue(fergaral.datetophoto.exif.ExifInterface.TAG_ORIENTATION);
+        int orientation = fergaral.datetophoto.exif.ExifInterface.Orientation.TOP_LEFT; //ExifInterface.ORIENTATION_NORMAL
+
+        if(orientationObj != null)
+            orientation = exifInterface.getTagIntValue(fergaral.datetophoto.exif.ExifInterface.TAG_ORIENTATION);
+
+        tempStr += imgPath + " -> ";
+
+        switch(orientation) {
+            case fergaral.datetophoto.exif.ExifInterface.Orientation.BOTTOM_LEFT:
+                tempStr += "BOTTOM_LEFT";
+                break;
+            case fergaral.datetophoto.exif.ExifInterface.Orientation.BOTTOM_RIGHT:
+                tempStr += "BOTTOM_RIGHT";
+                break;
+            case fergaral.datetophoto.exif.ExifInterface.Orientation.LEFT_BOTTOM:
+                tempStr += "LEFT_BOTTOM";
+                break;
+            case fergaral.datetophoto.exif.ExifInterface.Orientation.LEFT_TOP:
+                tempStr += "LEFT_TOP";
+                break;
+            case fergaral.datetophoto.exif.ExifInterface.Orientation.RIGHT_BOTTOM:
+                tempStr += "RIGHT_BOTTOM";
+                break;
+            case fergaral.datetophoto.exif.ExifInterface.Orientation.RIGHT_TOP:
+                tempStr += "RIGHT_TOP";
+                break;
+            case fergaral.datetophoto.exif.ExifInterface.Orientation.TOP_LEFT:
+                tempStr += "TOP_LEFT";
+                break;
+            case fergaral.datetophoto.exif.ExifInterface.Orientation.TOP_RIGHT:
+                tempStr += "TOP_RIGHT";
+                break;
+        }
+
+        tempStr += "\n";
     }
 }
