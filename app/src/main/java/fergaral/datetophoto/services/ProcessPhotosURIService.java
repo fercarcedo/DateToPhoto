@@ -276,6 +276,7 @@ public class ProcessPhotosURIService extends IntentService {
 
                 String date = "";
                 String exifDate = "";
+                int orientationAndroidExif = android.media.ExifInterface.ORIENTATION_NORMAL;
                 //int rotation = ExifInterface.Orientation
 
                 try {
@@ -283,6 +284,29 @@ public class ProcessPhotosURIService extends IntentService {
                     exifInterface.readExif(getContentResolver().openInputStream(uri));
                     date = getExifDate(exifInterface);
                     exifDate = exifInterface.getTagStringValue(ExifInterface.TAG_DATE_TIME);
+
+                    //Obtenemos la rotación de la imagen y la convertimos a las constantes de android.media.ExifInterface
+                    Object orientationObj = exifInterface.getTagValue(fergaral.datetophoto.exif.ExifInterface.TAG_ORIENTATION);
+                    int orientation = fergaral.datetophoto.exif.ExifInterface.Orientation.TOP_LEFT; //ExifInterface.ORIENTATION_NORMAL
+
+                    if(orientationObj != null)
+                        orientation = exifInterface.getTagIntValue(fergaral.datetophoto.exif.ExifInterface.TAG_ORIENTATION);
+
+
+                    switch(orientation) {
+                        case fergaral.datetophoto.exif.ExifInterface.Orientation.BOTTOM_LEFT:
+                            orientationAndroidExif = android.media.ExifInterface.ORIENTATION_ROTATE_180;
+                            break;
+                        case fergaral.datetophoto.exif.ExifInterface.Orientation.RIGHT_BOTTOM:
+                            orientationAndroidExif = android.media.ExifInterface.ORIENTATION_ROTATE_270;
+                            break;
+                        case fergaral.datetophoto.exif.ExifInterface.Orientation.RIGHT_TOP:
+                            orientationAndroidExif = android.media.ExifInterface.ORIENTATION_ROTATE_90;
+                            break;
+                        case fergaral.datetophoto.exif.ExifInterface.Orientation.TOP_LEFT:
+                            orientationAndroidExif = android.media.ExifInterface.ORIENTATION_NORMAL;
+                            break;
+                    }
 
                     if(exifDate != null) {
                         exifDate = exifDate.replaceAll(" ", "").replaceAll(":", "");
@@ -302,7 +326,7 @@ public class ProcessPhotosURIService extends IntentService {
                     date = getCurrentLocalizedDate();
                 }
 
-                Bitmap bitmap2 = writeDateOnBitmap(myBitmap, date);
+                Bitmap bitmap2 = writeDateOnBitmap(myBitmap, date, orientationAndroidExif);
 
                 myBitmap = null;
 
@@ -317,6 +341,10 @@ public class ProcessPhotosURIService extends IntentService {
                     android.media.ExifInterface exifInterface = new android.media.ExifInterface(new File(
                             Environment.getExternalStorageDirectory().getPath() + "/DateToPhoto/" + "dtp-" + exifDate + ".jpg").getAbsolutePath());
                     exifInterface.setAttribute(android.media.ExifInterface.TAG_MAKE, "dtp-");
+                    exifInterface.setAttribute(android.media.ExifInterface.TAG_ORIENTATION,
+                            String.valueOf(orientationAndroidExif));
+
+                    exifInterface.saveAttributes();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -416,40 +444,6 @@ public class ProcessPhotosURIService extends IntentService {
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notificationManager.notify(NOTIFICATION_ID, notifBuilder.build());
-    }
-
-    public Bitmap writeDateOnBitmap(Bitmap b, String text) {
-
-        float scale = getResources().getDisplayMetrics().density;
-        Bitmap.Config bitmapConfig = b.getConfig();
-
-        if (bitmapConfig == null) {
-            bitmapConfig = Bitmap.Config.ARGB_8888;
-        }
-
-        //b = b.copy(bitmapConfig, true);
-
-        Canvas canvas = new Canvas(b);
-
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(Color.YELLOW);
-        paint.setTextSize(Math.min(b.getWidth() / 20, b.getHeight() / 20));
-        paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
-
-        Rect bounds = new Rect();
-        paint.getTextBounds(text, 0, text.length(), bounds);
-        //int x = (b.getWidth() - bounds.width()) / 2;
-        //int y = (b.getHeight() + bounds.height()) / 2;
-
-        double margin = (b.getWidth() * 0.2) / 10;
-        int x = (int) (b.getWidth() - bounds.width() - margin);
-        int y = b.getHeight() - bounds.height();
-        canvas.drawText(text, x, y, paint);
-        tempStr += "\n";
-
-        //Toast.makeText(this, String.valueOf(b.getHeight()), Toast.LENGTH_LONG).show();
-        //Toast.makeText(this, "Height: "+ String.valueOf(b.getHeight()) + " Width: " + String.valueOf(b.getWidth()), Toast.LENGTH_LONG).show();
-        return b;
     }
 
     public ArrayList getCameraImages(Context context) {
@@ -656,5 +650,107 @@ public class ProcessPhotosURIService extends IntentService {
 
     private String getCurrentLocalizedDate() {
         return Utils.getFormattedDate(new Date());
+    }
+
+    public Bitmap writeDateOnBitmap(Bitmap b, String text, int orientation) {
+
+        Bitmap.Config bitmapConfig = b.getConfig();
+
+        if(bitmapConfig == null) {
+            bitmapConfig = Bitmap.Config.ARGB_8888;
+        }
+
+        //b = b.copy(bitmapConfig, true);
+
+        Canvas canvas = new Canvas(b);
+
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(Color.YELLOW);
+        paint.setTextSize(Math.min(b.getWidth() / 20, b.getHeight() / 20));
+        paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
+
+        Rect bounds = new Rect();
+        paint.getTextBounds(text, 0, text.length(), bounds);
+        //int x = (b.getWidth() - bounds.width()) / 2;
+        //int y = (b.getHeight() + bounds.height()) / 2;
+
+        double marginWidth = (b.getWidth() * 0.2) / 10;
+        double marginHeight = (b.getHeight() * 0.2) / 10;
+        int x = (int) (b.getWidth() - bounds.width() - marginWidth);
+        int y = (int) (b.getHeight() - marginHeight);
+
+        switch(orientation)
+        {
+            case android.media.ExifInterface.ORIENTATION_ROTATE_270:
+            {
+                canvas.save();
+
+                x = bounds.height(); //altotexto
+                y = (int) (b.getHeight() - bounds.width() - marginHeight); //alto - anchotexto
+
+                canvas.rotate(-270, x, y);
+
+                canvas.drawText(text, x, y, paint);
+
+                canvas.restore();
+                break;
+            }
+            case android.media.ExifInterface.ORIENTATION_ROTATE_90:
+            {
+                canvas.save();
+
+                /*x = b.getWidth() - bounds.height(); //ancho - altotexto
+                y = (int) (bounds.width() + margin); //anchotexto*/
+
+                x = b.getWidth() - bounds.height(); //ancho - altotexto
+                y = (int) (bounds.width() + marginHeight); //anchotexto
+
+                canvas.rotate(-90, x, y);
+
+
+                canvas.drawText(text, x, y, paint);
+
+                canvas.restore();
+                break;
+            }
+            case android.media.ExifInterface.ORIENTATION_ROTATE_180:
+            {
+                canvas.save();
+
+                x = (int) (bounds.width() + marginWidth);
+                y = (int) marginHeight;
+
+                canvas.rotate(-180, x, y);
+
+                canvas.drawText(text, x, y, paint);
+
+                canvas.restore();
+                break;
+            }
+            default:
+            {
+                canvas.drawText(text, x, y, paint);
+                break;
+            }
+        }
+
+        switch(orientation)
+        {
+            case android.media.ExifInterface.ORIENTATION_ROTATE_270: tempStr += "ORIENTATION_ROTATE_270"; break;
+            case android.media.ExifInterface.ORIENTATION_TRANSVERSE: tempStr += "ORIENTATION_TRANSVERSE"; break;
+            case android.media.ExifInterface.ORIENTATION_TRANSPOSE: tempStr += "ORIENTATION_TRANSPOSE"; break;
+            case android.media.ExifInterface.ORIENTATION_ROTATE_90: tempStr += "ORIENTATION_ROTATE_90"; break;
+            case android.media.ExifInterface.ORIENTATION_UNDEFINED: tempStr += "ORIENTATION_UNDEFINED"; break;
+            case android.media.ExifInterface.ORIENTATION_ROTATE_180: tempStr += "ORIENTATION_ROTATE_180"; break;
+            case android.media.ExifInterface.ORIENTATION_NORMAL: tempStr += "ORIENTATION_NORMAL"; break;
+            case android.media.ExifInterface.ORIENTATION_FLIP_HORIZONTAL: tempStr += "ORIENTATION_FLIP_HORIZONTAL"; break;
+            case android.media.ExifInterface.ORIENTATION_FLIP_VERTICAL: tempStr += "ORIENTATION_FLIP_VERTICAL"; break;
+        }
+
+        tempStr += "\n";
+
+        //Toast.makeText(this, String.valueOf(b.getHeight()), Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "Height: "+ String.valueOf(b.getHeight()) + " Width: " + String.valueOf(b.getWidth()), Toast.LENGTH_LONG).show();
+        return b;
     }
 }

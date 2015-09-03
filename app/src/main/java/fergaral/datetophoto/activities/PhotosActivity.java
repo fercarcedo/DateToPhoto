@@ -12,6 +12,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
@@ -73,6 +74,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private TextView noPhotosTextView;
     private AsyncTask loadPhotosTask;
     private boolean hideNoPhotosTextView;
+    private Bundle mSavedInstanceState;
+    private Intent mIntent;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -162,66 +165,18 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         boolean searchPhotos = prefs.getBoolean("searchPhotosFirstUse", true);
 
+        mIntent = intent;
+        mSavedInstanceState = savedInstanceState;
+
         if(searchPhotos) {
-            //Mostramos un diálogo preguntando si usaron Date To Photo previamente
-            final MaterialDialog usedPreviouslyDialog = new MaterialDialog.Builder(this)
-                    .title("¿Has usado antes Date To Photo?")
-                    .content("Selecciona SÍ si en este dispositivo hay alguna foto fechada previamente con esta aplicación. "
-                    + "Si no hay, o no recuerdas haber usado Date To Photo, selecciona NO")
-                    .positiveText("Sí")
-                    .negativeText("No")
-                    .cancelable(false)
-                    .autoDismiss(true)
-                    .build();
-
-            usedPreviouslyDialog.getActionButton(DialogAction.POSITIVE).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    usedPreviouslyDialog.dismiss();
-
-                    //Buscamos si hay fotos sin fechar
-                    Utils.searchForAlreadyProcessedPhotos(PhotosActivity.this, new ProgressChangedListener() {
-                        private int total;
-
-                        @Override
-                        public void reportTotal(final int total) {
-                            datestampingPhotosTv.setText("Buscando fotos ya fechadas...");
-                            showProgress(total);
-                        }
-
-                        @Override
-                        public void onProgressChanged(final int progress) {
-                            progressCircle.setActual(PhotosActivity.this, progress);
-                        }
-
-                        @Override
-                        public void reportEnd(boolean fromActionShare) {
-                            hideProgress();
-                            refreshGrid();
-
-                            checkSharedPhotos(savedInstanceState, intent);
-                        }
-                    });
-
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.putBoolean("searchPhotosFirstUse", false);
-                    editor.apply();
-                }
-            });
-
-            usedPreviouslyDialog.getActionButton(DialogAction.NEGATIVE).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    usedPreviouslyDialog.dismiss();
-
-                    loadPhotosTask = new ImagesToProcessTask().execute();
-                    checkSharedPhotos(savedInstanceState, intent);
-                }
-            });
-
-            usedPreviouslyDialog.show();
+            //Mostramos un diálogo preguntando si usaron Date To Photo previamente, pero solo si es la primera vez que
+            //se abre la app (porque sería un DialogFragment y se mantiene intacto en rotaciones, etc)
+            if(savedInstanceState == null) {
+                new FirstUseDialogFragment().show(getSupportFragmentManager(), FirstUseDialogFragment.class.getSimpleName());
+            }
         }else{
             loadPhotosTask = new ImagesToProcessTask().execute();
+            checkSharedPhotos(savedInstanceState, intent);
         }
     }
 
@@ -271,13 +226,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 if (fromActionShare) {
                     //Las fotos fueron compartidas desde una aplicación, mostramos el diálogo que advierte al usuario de que las
                     //fotos ya fechadas están en la carpeta DateToPhoto
-                    new MaterialDialog.Builder(PhotosActivity.this)
-                            .title("El proceso ha finalizado")
-                            .content("Como las fotos han sido compartidas desde una aplicación, las fotos con fecha se han guardado en la" +
-                                    " carpeta DateToPhoto. Si quieres que la foto con fecha se guarde en la misma carpeta que la original " +
-                                    " (o que la sobreescriba, no feches las fotos desde el botón de compartir)")
-                            .positiveText("De acuerdo")
-                            .show();
+                    new ShareEndDialogFragment().show(getSupportFragmentManager(), ShareEndDialogFragment.class.getSimpleName());
                 }
             }
         });
@@ -293,6 +242,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 processPhotosBtn.show();
             }
         }
+
+        if(fromActionShare)
+            refreshGrid();
     }
 
     public class PhotosAdapter extends BaseAdapter {
@@ -616,6 +568,88 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     .content("Desarrollada por Fernando García Álvarez\nTesting por Sergio Artidiello González")
                     .positiveText("Aceptar")
                     .iconRes(R.drawable.ic_launcher)
+                    .show();
+        }
+    }
+
+    public static class FirstUseDialogFragment extends DialogFragment {
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            final MaterialDialog usedPreviouslyDialog = new MaterialDialog.Builder(getActivity())
+                    .title("¿Has usado antes Date To Photo?")
+                    .content("Selecciona SÍ si en este dispositivo hay alguna foto fechada previamente con esta aplicación. "
+                            + "Si no hay, o no recuerdas haber usado Date To Photo, selecciona NO")
+                    .positiveText("Sí")
+                    .negativeText("No")
+                    .cancelable(false)
+                    .autoDismiss(true)
+                    .build();
+
+            final PhotosActivity activity = (PhotosActivity) getActivity();
+
+            usedPreviouslyDialog.getActionButton(DialogAction.POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    usedPreviouslyDialog.dismiss();
+
+                    //Buscamos si hay fotos sin fechar
+                    Utils.searchForAlreadyProcessedPhotos(getActivity(), new ProgressChangedListener() {
+                        private int total;
+
+                        @Override
+                        public void reportTotal(final int total) {
+                            activity.datestampingPhotosTv.setText("Buscando fotos ya fechadas...");
+                            activity.showProgress(total);
+                        }
+
+                        @Override
+                        public void onProgressChanged(final int progress) {
+                            activity.progressCircle.setActual(getActivity(), progress);
+                        }
+
+                        @Override
+                        public void reportEnd(boolean fromActionShare) {
+                            activity.hideProgress();
+                            activity.refreshGrid();
+
+                            activity.checkSharedPhotos(activity.mSavedInstanceState, activity.mIntent);
+                        }
+                    });
+
+                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.putBoolean("searchPhotosFirstUse", false);
+                    editor.apply();
+                }
+            });
+
+            usedPreviouslyDialog.getActionButton(DialogAction.NEGATIVE).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    usedPreviouslyDialog.dismiss();
+
+                    activity.refreshGrid();
+                    activity.checkSharedPhotos(activity.mSavedInstanceState, activity.mIntent);
+                }
+            });
+
+            usedPreviouslyDialog.show();
+
+            return usedPreviouslyDialog;
+        }
+    }
+
+    public static class ShareEndDialogFragment extends DialogFragment {
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            return new MaterialDialog.Builder(getActivity())
+                    .title("El proceso ha finalizado")
+                    .content("Como las fotos han sido compartidas desde una aplicación, las fotos con fecha se han guardado en la" +
+                            " carpeta DateToPhoto. Si quieres que la foto con fecha se guarde en la misma carpeta que la original " +
+                            " (o que la sobreescriba, no feches las fotos desde el botón de compartir)")
+                    .positiveText("De acuerdo")
                     .show();
         }
     }

@@ -18,7 +18,7 @@ import fergaral.datetophoto.utils.Utils;
  */
 public class DatabaseHelper extends SQLiteOpenHelper {
 
-    private String CREATE_SQL = "CREATE TABLE " + TABLE_NAME + " (" + PATH_COLUMN + " TEXT) ";
+    private String CREATE_SQL = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" + PATH_COLUMN + " TEXT) ";
     public static final String TABLE_NAME = "Photos";
     public static final String PATH_COLUMN = "path";
     public static final String DB_NAME = "fergaraldatetophotodb";

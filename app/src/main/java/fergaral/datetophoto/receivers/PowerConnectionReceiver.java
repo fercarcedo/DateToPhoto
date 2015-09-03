@@ -49,7 +49,7 @@ public class PowerConnectionReceiver extends WakefulBroadcastReceiver {
             Intent serviceIntent = new Intent(context, ProcessPhotosService.class);
             startWakefulService(context, serviceIntent);
         }else if(intent.getAction().equals(Intent.ACTION_POWER_DISCONNECTED)) {
-            //Cancelamos el servicio, si se está lanzó al poner el dispositivo a cargar
+            //Cancelamos el servicio, si se lanzó al poner el dispositivo a cargar
             Intent cancelIntent = new Intent(ProcessPhotosService.ACTION_CANCEL_CHARGER_DISCONNECTED);
             cancelIntent.putExtra(ProcessPhotosService.CANCEL_SERVICE, true);
 
