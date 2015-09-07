@@ -65,7 +65,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private ArrayList<String> selectedPaths;
     private boolean wasFABPressed;
     private ActionButton processPhotosBtn, fabSpeedDial1, fabSpeedDial2;
-    private RelativeLayout coverRl;
+    private View coverView;
     private int mNumberOfColumns;
     private CardView cardSpeedDial1, cardSpeedDial2;
     private ProgressCircle progressCircle;
@@ -93,11 +93,11 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         loadingBar = (CircularProgressWheel) findViewById(R.id.loadingPhotosProgressBar);
         fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
-        coverRl = (RelativeLayout) findViewById(R.id.photos_cover_rl);
+        coverView = findViewById(R.id.coverView);
         datestampingPhotosTv = (TextView) findViewById(R.id.datestamping_photos_tv);
         progressCircle = (ProgressCircle) findViewById(R.id.progressCircle);
 
-        coverRl.setOnClickListener(new View.OnClickListener() {
+        coverView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 //Pulsar el fondo gris es equivalente a pulsar el botón grande
@@ -326,7 +326,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             cardSpeedDial1.setVisibility(View.GONE);
             cardSpeedDial2.setVisibility(View.GONE);
 
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            /*if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 //El centro de la animación de revelar es el botón
                 float x = processPhotosBtn.getX();
                 float y = processPhotosBtn.getY();
@@ -346,7 +346,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     }
                 });
                 anim.start();
-            }
+            }*/
+
+            coverView.setVisibility(View.INVISIBLE);
 
             //Al estar pulsado previamente, el icono que había era el aspa, así que lo cambiamos por el tick
             processPhotosBtn.setImageResource(R.drawable.ic_done_24px);
@@ -357,7 +359,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             cardSpeedDial1.setVisibility(View.VISIBLE);
             cardSpeedDial2.setVisibility(View.VISIBLE);
 
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            /*if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 //El centro de la animación de revelar es el botón
                 float x = processPhotosBtn.getX();
                 float y = processPhotosBtn.getY();
@@ -371,7 +373,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 anim.setInterpolator(new AccelerateDecelerateInterpolator());
                 coverRl.setVisibility(View.VISIBLE);
                 anim.start();
-            }
+            }*/
+
+            coverView.setVisibility(View.VISIBLE);
 
             //Al no estar pulsado previamente, el icono que había era el tick, así que lo cambiamos por el aspa
             processPhotosBtn.setImageResource(R.drawable.ic_clear_24dp);

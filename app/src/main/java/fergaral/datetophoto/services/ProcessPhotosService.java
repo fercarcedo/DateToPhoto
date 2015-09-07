@@ -21,6 +21,7 @@ import android.graphics.Rect;
 import android.media.ExifInterface;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.ResultReceiver;
@@ -198,6 +199,8 @@ public class ProcessPhotosService extends IntentService {
                 }
             }, new IntentFilter(ProcessPhotosService.ACTION_CANCEL_CHARGER_DISCONNECTED));
 
+            boolean isHoneycomb = Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB;
+
             for (String s : galleryImages) {
                 File imgFile = new File(s);
                 if (imgFile.exists() && !dialogCancelled && !cancelledCharger) {
@@ -248,7 +251,10 @@ public class ProcessPhotosService extends IntentService {
                     int reduction = (int) Math.ceil((double) previousSize / imageSize);
 
                     options = new BitmapFactory.Options();
-                    //options.inMutable = true;
+
+                    if(isHoneycomb)
+                        options.inMutable = true;
+
                     options.inPreferredConfig = Bitmap.Config.ARGB_8888;
 
                     if (wasLarge)
@@ -281,7 +287,8 @@ public class ProcessPhotosService extends IntentService {
 
                     tempStr += s + " -> ";
 
-                    myBitmap = convertToMutable(myBitmap);
+                    if(!isHoneycomb)
+                        myBitmap = convertToMutable(myBitmap);
 
                     String date = "";
                     int rotation = ExifInterface.ORIENTATION_NORMAL;
