@@ -23,7 +23,7 @@ import fergaral.datetophoto.R;
 public class ProgressCircle extends LinearLayout {
 
     private DonutProgress donutProgress;
-    private TextView progTv;
+    private TextView progTv, titleTv;
     private int total;
     private int actual;
 
@@ -37,11 +37,17 @@ public class ProgressCircle extends LinearLayout {
         View view = inflater.inflate(R.layout.circle_prog_layout, this);
         donutProgress = (DonutProgress) view.findViewById(R.id.progress_circle);
         progTv = (TextView) view.findViewById(R.id.progress_circle_progtv);
+        titleTv = (TextView) view.findViewById(R.id.progress_circle_titletv);
     }
 
     public void setTotal(int total) {
         this.total = total;
         progTv.setText(0 + "/" + total);
+    }
+
+    public void setTitle(String title) {
+        if(title != null)
+            titleTv.setText(title);
     }
 
     public void setActual(final Activity activity, final int actual) {

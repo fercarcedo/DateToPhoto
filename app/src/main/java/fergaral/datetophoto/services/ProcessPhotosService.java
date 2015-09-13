@@ -97,7 +97,7 @@ public class ProcessPhotosService extends IntentService {
 
         if(onBackground) {
             SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-            boolean active = sharedPreferences.getBoolean(getString(R.string.pref_active_key), true);
+            boolean active = sharedPreferences.getBoolean(getString(R.string.pref_active_key), false);
 
             if (!active) {
                 PowerConnectionReceiver.completeWakefulIntent(intent);

@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".PhotosActivity" >
 
+    <item android:id="@+id/action_refresh"
+        android:title="Recargar"
+        app:showAsAction="ifRoom"
+        android:icon="@drawable/ic_action_refresh_24px" />
+
    <item android:id="@+id/action_diskspaceusage"
         android:title="Espacio en disco"
         app:showAsAction="never" />

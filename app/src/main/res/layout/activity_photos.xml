@@ -18,6 +18,9 @@
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
+            android:layout_below="@id/tool_bar"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="15dp"
             android:visibility="invisible" />
 
         <GridView
@@ -45,6 +48,7 @@
             android:id="@+id/loadingPhotosProgressBar"
             android:layout_width="50dp"
             android:layout_height="50dp"
+            android:visibility="invisible"
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
             fab:matProg_barColor="@color/colorAccent"
@@ -57,16 +61,6 @@
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
             android:text="No hay fotos sin fechar"
-            android:visibility="invisible" />
-
-        <TextView
-            android:id="@+id/datestamping_photos_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_above="@+id/progressCircle"
-            android:layout_centerHorizontal="true"
-            android:layout_centerVertical="true"
-            android:text="Fechando fotos..."
             android:visibility="invisible" />
 
     </RelativeLayout>
@@ -97,24 +91,29 @@
         fab:show_animation="@anim/fab_roll_from_down"
         fab:type="DEFAULT" />
 
-    <android.support.v7.widget.CardView
-        android:id="@+id/card_fab_speeddial_action2"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
+    <com.andexert.library.RippleView android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="96dp"
         android:layout_marginEnd="60dp"
         android:layout_marginRight="60dp"
+        fab:rv_type="rectangle">
+
+    <android.support.v7.widget.CardView
+        android:id="@+id/card_fab_speeddial_action2"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
         fab:cardUseCompatPadding="true">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:padding="4dp"
             android:layout_gravity="center_horizontal|center_vertical"
+            android:padding="4dp"
             android:text="Todas las fotos" />
 
     </android.support.v7.widget.CardView>
+    </com.andexert.library.RippleView>
 
     <com.software.shell.fab.ActionButton
         android:id="@+id/fab_speeddial_action2"
@@ -136,24 +135,30 @@
         fab:show_animation="@anim/fab_roll_from_down"
         fab:type="MINI" />
 
-    <android.support.v7.widget.CardView
-        android:id="@+id/card_fab_speeddial_action1"
+    <com.andexert.library.RippleView
         android:layout_width="wrap_content"
-        android:layout_height="40dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="160dp"
         android:layout_marginEnd="60dp"
         android:layout_marginRight="60dp"
+        fab:rv_type="rectangle">
+
+    <android.support.v7.widget.CardView
+        android:id="@+id/card_fab_speeddial_action1"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
         fab:cardUseCompatPadding="true">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:padding="4dp"
             android:layout_gravity="center_vertical|center_horizontal"
+            android:padding="4dp"
             android:text="Fotos seleccionadas" />
 
     </android.support.v7.widget.CardView>
+    </com.andexert.library.RippleView>
 
     <com.software.shell.fab.ActionButton
         android:id="@+id/fab_speeddial_action1"

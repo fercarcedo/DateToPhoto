@@ -106,7 +106,7 @@ public final class Utils {
     public static boolean overwritePhotos(Context context)
     {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getBoolean(context.getString(R.string.pref_overwrite_key), false);
+        return prefs.getBoolean(context.getString(R.string.pref_overwrite_key), true);
     }
 
 

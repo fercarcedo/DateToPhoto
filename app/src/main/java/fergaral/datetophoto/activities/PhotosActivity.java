@@ -3,9 +3,11 @@ package fergaral.datetophoto.activities;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -37,13 +39,16 @@ import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.andexert.library.RippleView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.software.shell.fab.ActionButton;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.db.DatabaseHelper;
+import fergaral.datetophoto.fragments.LoadPhotosFragment;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.services.RegisterPhotoURIIntoDBService;
 import fergaral.datetophoto.utils.CircularProgressWheel;
@@ -55,8 +60,14 @@ import fergaral.datetophoto.utils.Utils;
 /**
  * Created by fer on 18/07/15.
  */
-public class PhotosActivity extends AppCompatActivity implements ProgressChangedListener {
+public class PhotosActivity extends AppCompatActivity implements ProgressChangedListener,
+                                                                    LoadPhotosFragment.TaskCallbacks {
 
+    private static final String PROGRESSBAR_SHOWING_KEY = "progressBarShowing";
+    private static final String LOAD_PHOTOS_FRAGMENT_TAG = "loadPhotosFragment";
+    private static final String PHOTOS_LIST_KEY = "photosList";
+    private static final String SELECTED_PHOTOS_KEY = "selectedPhotos";
+    private static final String FAB_PRESSED_KEY = "fabPressed";
     public static final String EXTRA_IMAGE_URI = "fergaraldatetophotoextraimageuri";
     public static boolean SHOULD_REFRESH_GRID = false;
     public static boolean IS_PROCESSING = false;
@@ -69,13 +80,13 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private int mNumberOfColumns;
     private CardView cardSpeedDial1, cardSpeedDial2;
     private ProgressCircle progressCircle;
-    private TextView datestampingPhotosTv;
     private CircularProgressWheel loadingBar;
     private TextView noPhotosTextView;
-    private AsyncTask loadPhotosTask;
     private boolean hideNoPhotosTextView;
     private Bundle mSavedInstanceState;
     private Intent mIntent;
+    private ArrayList<String> mImagesToProcess;
+    private LoadPhotosFragment loadPhotosFragment;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -94,7 +105,6 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
         coverView = findViewById(R.id.coverView);
-        datestampingPhotosTv = (TextView) findViewById(R.id.datestamping_photos_tv);
         progressCircle = (ProgressCircle) findViewById(R.id.progressCircle);
 
         coverView.setOnClickListener(new View.OnClickListener() {
@@ -127,32 +137,28 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         fabSpeedDial1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //Se pulsó el botón de fechar las fotos seleccionadas
-                //Arrancamos el servicio de fechar fotos con las imágenes seleccionadas
-                clearSelectedPhotos();
-                processPhotosBtn.hide();
-
-                Utils.startProcessPhotosService(PhotosActivity.this, PhotosActivity.this, selectedPaths);
-
-                //Ocultamos los botones (es equivalente a pulsar el FAB grande)
-                clickBigFAB();
+                clickFabSpeedDial1();
             }
         });
 
         fabSpeedDial2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                clickFabSpeedDial2();
+            }
+        });
 
-                selectAll();
+        cardSpeedDial1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clickFabSpeedDial1();
+            }
+        });
 
-                clearSelectedPhotos();
-                processPhotosBtn.hide();
-
-                //Fechamos todas las fotos
-                Utils.startProcessPhotosService(PhotosActivity.this, PhotosActivity.this, selectedPaths);
-
-                //Ocultamos los botones ("pulsamos" el FAB)
-                clickBigFAB();
+        cardSpeedDial2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clickFabSpeedDial2();
             }
         });
 
@@ -175,7 +181,55 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 new FirstUseDialogFragment().show(getSupportFragmentManager(), FirstUseDialogFragment.class.getSimpleName());
             }
         }else{
-            loadPhotosTask = new ImagesToProcessTask().execute();
+            if(savedInstanceState != null && savedInstanceState.containsKey(PHOTOS_LIST_KEY)) {
+                mImagesToProcess = savedInstanceState.getStringArrayList(PHOTOS_LIST_KEY);
+
+                if(mImagesToProcess != null && mImagesToProcess.size() > 0) {
+
+                    if(savedInstanceState.containsKey(SELECTED_PHOTOS_KEY))
+                        selectedPaths = savedInstanceState.getStringArrayList(SELECTED_PHOTOS_KEY);
+
+                    if(savedInstanceState.containsKey(FAB_PRESSED_KEY))
+                        wasFABPressed = savedInstanceState.getBoolean(FAB_PRESSED_KEY);
+
+                    if(wasFABPressed) {
+                        fabSpeedDial1.show();
+                        fabSpeedDial2.show();
+                        cardSpeedDial1.setVisibility(View.VISIBLE);
+                        cardSpeedDial2.setVisibility(View.VISIBLE);
+                        coverView.setVisibility(View.VISIBLE);
+                        processPhotosBtn.setImageResource(R.drawable.ic_clear_24dp);
+                    }
+
+                    photosGrid.setAdapter(new PhotosAdapter(mImagesToProcess));
+                    photosGrid.setNumColumns(Utils.landscape(this) ? 5 : 3);
+                    processPhotosBtn.show();
+                }else{
+                    noPhotosTextView.setVisibility(View.VISIBLE);
+                }
+            }else {
+                //Iniciamos la AsyncTask (en el Headless Fragment)
+                loadPhotosFragment = (LoadPhotosFragment) getSupportFragmentManager()
+                                                                .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG);
+
+                if(loadPhotosFragment == null) {
+                    //Todavía no hemos creado el Fragment. Lo creamos e iniciamos la AsyncTask
+                    loadPhotosFragment = new LoadPhotosFragment();
+                    getSupportFragmentManager()
+                            .beginTransaction()
+                            .add(loadPhotosFragment, LOAD_PHOTOS_FRAGMENT_TAG)
+                            .commit();
+                }else{
+                    //El Fragment ya se creó (pudo ser debido a un cambio de rotación)
+                    if(savedInstanceState != null && savedInstanceState.containsKey(PROGRESSBAR_SHOWING_KEY)) {
+                        boolean wasProgressBarShowing = savedInstanceState.getBoolean(PROGRESSBAR_SHOWING_KEY);
+
+                        if(wasProgressBarShowing)
+                            loadingBar.setVisibility(View.VISIBLE);
+                    }
+                }
+            }
+
             checkSharedPhotos(savedInstanceState, intent);
         }
     }
@@ -201,6 +255,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             case R.id.action_tutorial:
                 Utils.startActivityCompat(this, new Intent(this, TutorialActivity.class));
                 break;
+            case R.id.action_refresh:
+                refreshGrid();
+                break;
         }
 
         return super.onOptionsItemSelected(item);
@@ -208,7 +265,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
     @Override
     public void reportTotal(final int total) {
-        showProgress(total);
+        showProgress(total, "Fechando fotos...");
 
         selectedPaths = new ArrayList<>();
     }
@@ -247,11 +304,49 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             refreshGrid();
     }
 
-    public class PhotosAdapter extends BaseAdapter {
-        private ArrayList<String> images;
+    @Override
+    public void onPreExecute() {
+        loadingBar.setVisibility(View.VISIBLE);
+        photosGrid.setVisibility(View.INVISIBLE);
+        noPhotosTextView.setVisibility(View.INVISIBLE);
+        processPhotosBtn.hide();
+    }
 
-        public PhotosAdapter(ArrayList<String> images) {
+    @Override
+    public void onPostExecute(ArrayList<String> imagesToProcess) {
+        mImagesToProcess = imagesToProcess;
+
+        if(!PhotosActivity.IS_PROCESSING) {
+            photosGrid.setVisibility(View.VISIBLE);
+            photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
+            photosGrid.setNumColumns(Utils.landscape(PhotosActivity.this) ? 5 : 3);
+        }
+
+        if (loadingBar.getVisibility() == View.VISIBLE)
+            loadingBar.setVisibility(View.INVISIBLE);
+
+        if(hideNoPhotosTextView)
+            hideNoPhotosTextView = false;
+
+        if(!PhotosActivity.IS_PROCESSING) {
+            if (imagesToProcess.size() == 0) {
+                noPhotosTextView.setVisibility(View.VISIBLE);
+            } else if (imagesToProcess.size() != 0) {
+                processPhotosBtn.show();
+            }
+        }
+    }
+
+    public class PhotosAdapter extends BaseAdapter {
+        private List<String> images;
+
+        public PhotosAdapter(List<String> images) {
             this.images = images;
+
+            if(images != null && images.size() != 0) {
+                if(noPhotosTextView != null)
+                    noPhotosTextView.setVisibility(View.INVISIBLE);
+            }
         }
 
         @Override
@@ -384,58 +479,6 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         wasFABPressed = !wasFABPressed;
     }
 
-    public class ImagesToProcessTask extends AsyncTask<Void, Void, ArrayList<String>> {
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            loadingBar.setVisibility(View.VISIBLE);
-            photosGrid.setVisibility(View.INVISIBLE);
-            noPhotosTextView.setVisibility(View.INVISIBLE);
-            processPhotosBtn.hide();
-        }
-
-        @Override
-        protected ArrayList<String> doInBackground(Void... voids) {
-            SQLiteDatabase photosDb = new DatabaseHelper(PhotosActivity.this).getReadableDatabase();
-
-            ArrayList<String> cameraImages = new PhotoUtils(PhotosActivity.this).getCameraImages();
-
-            //Obtenemos las fotos sin fechar de entre las que hay que procesar, ya que es más rápido identificar las que hay
-            //que procesar, que no las que están sin fechars
-            ArrayList<String> imagesToProcess = Utils.getPhotosWithoutDate(PhotosActivity.this,
-                    Utils.getImagesToProcess(PhotosActivity.this, cameraImages), photosDb);
-
-            photosDb.close();
-
-            return imagesToProcess;
-        }
-
-        @Override
-        protected void onPostExecute(ArrayList<String> imagesToProcess) {
-            super.onPostExecute(imagesToProcess);
-
-            if(!PhotosActivity.IS_PROCESSING) {
-                photosGrid.setVisibility(View.VISIBLE);
-                photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
-                photosGrid.setNumColumns(mNumberOfColumns);
-            }
-
-            if (loadingBar.getVisibility() == View.VISIBLE)
-                loadingBar.setVisibility(View.INVISIBLE);
-
-            if(hideNoPhotosTextView)
-                hideNoPhotosTextView = false;
-
-            if(!PhotosActivity.IS_PROCESSING) {
-                if (imagesToProcess.size() == 0) {
-                    noPhotosTextView.setVisibility(View.VISIBLE);
-                } else if (imagesToProcess.size() != 0) {
-                    processPhotosBtn.show();
-                }
-            }
-        }
-    }
-
     private void handleSingleImage(Intent intent) {
         Uri imageUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
         ArrayList<String> selectedPaths = new ArrayList<>();
@@ -445,14 +488,14 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             //Lanzamos el servicio de procesar fotos por URI con la foto
             Utils.startProcessPhotosURIService(this, this, selectedPaths);
 
-            //Si podemos encontrar la ruta local de la foto, la añadimos a la BD
+            /*//Si podemos encontrar la ruta local de la foto, la añadimos a la BD
             Intent addPhotoIntent = new Intent(this, RegisterPhotoURIIntoDBService.class);
 
             ArrayList<Uri> imageUris = new ArrayList<>();
             imageUris.add(imageUri);
 
             addPhotoIntent.putExtra(EXTRA_IMAGE_URI, imageUris);
-            startService(addPhotoIntent);
+            startService(addPhotoIntent);*/
         }
     }
 
@@ -470,10 +513,10 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             //Procesamos las fotos
             Utils.startProcessPhotosURIService(this, this, selectedPaths);
 
-            //Si existe la ruta local de la URI, añadimos la ruta de la foto a la base de datos
+            /*//Si existe la ruta local de la URI, añadimos la ruta de la foto a la base de datos
             Intent addPhotosIntent = new Intent(this, RegisterPhotoURIIntoDBService.class);
             addPhotosIntent.putExtra(EXTRA_IMAGE_URI, imageUris);
-            startService(addPhotosIntent);
+            startService(addPhotosIntent);*/
         }
     }
 
@@ -495,7 +538,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         }
     }
 
-    private void showProgress(int total) {
+    private void showProgress(int total, String title) {
         PhotosActivity.IS_PROCESSING = true;
 
         photosGrid.setVisibility(View.INVISIBLE);
@@ -506,7 +549,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         //Establecemos el total de fotos a fechar
         progressCircle.setTotal(total);
         progressCircle.setVisibility(View.VISIBLE);
-        datestampingPhotosTv.setVisibility(View.VISIBLE);
+        progressCircle.setTitle(title);
     }
 
     private void hideProgress() {
@@ -515,7 +558,6 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         Utils.unlockOrientation(this);
         photosGrid.setVisibility(View.VISIBLE);
         progressCircle.setVisibility(View.INVISIBLE);
-        datestampingPhotosTv.setVisibility(View.INVISIBLE);
 
         if(PhotosActivity.SHOULD_REFRESH_GRID) {
             //Actualizamos la lista de fotos
@@ -534,14 +576,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         super.onRestart();
 
         if(!PhotosActivity.IS_PROCESSING && PhotosActivity.SHOULD_REFRESH_GRID) {
-            //Actualizamos la lista de fotos
-            if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
-                //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
-                loadPhotosTask.cancel(true);
-            }
-
-            loadPhotosTask = new ImagesToProcessTask().execute();
-            PhotosActivity.SHOULD_REFRESH_GRID = false;
+            refreshGrid();
         }
     }
 
@@ -603,8 +638,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
                         @Override
                         public void reportTotal(final int total) {
-                            activity.datestampingPhotosTv.setText("Buscando fotos ya fechadas...");
-                            activity.showProgress(total);
+                            activity.showProgress(total, "Buscando fotos ya fechadas...");
                         }
 
                         @Override
@@ -650,9 +684,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             return new MaterialDialog.Builder(getActivity())
                     .title("El proceso ha finalizado")
-                    .content("Como las fotos han sido compartidas desde una aplicación, las fotos con fecha se han guardado en la" +
-                            " carpeta DateToPhoto. Si quieres que la foto con fecha se guarde en la misma carpeta que la original " +
-                            " (o que la sobreescriba, no feches las fotos desde el botón de compartir)")
+                    .content("Como las fotos han sido compartidas desde una aplicación, las fotos con fecha que " +
+                            "no procedían del dispositivo (por ejemplo, de la nube) se han guardado en la" +
+                            " carpeta DateToPhoto.")
                     .positiveText("De acuerdo")
                     .show();
         }
@@ -667,12 +701,11 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     private void refreshGrid() {
-        if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
-            //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
-            loadPhotosTask.cancel(true);
-        }
+        if(loadPhotosFragment != null)
+            loadPhotosFragment.refresh();
+        else
+            Log.d("TAG", "loadPhotosFragment null");
 
-        loadPhotosTask = new ImagesToProcessTask().execute();
         PhotosActivity.SHOULD_REFRESH_GRID = false;
         hideNoPhotosTextView = true;
     }
@@ -685,5 +718,38 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction()))
                 handleMultipleImages(intent);
         }
+    }
+
+    private void clickFabSpeedDial1() {
+        //Se pulsó el botón de fechar las fotos seleccionadas
+        //Arrancamos el servicio de fechar fotos con las imágenes seleccionadas
+        clearSelectedPhotos();
+        processPhotosBtn.hide();
+
+        Utils.startProcessPhotosService(PhotosActivity.this, PhotosActivity.this, selectedPaths);
+
+        //Ocultamos los botones (es equivalente a pulsar el FAB grande)
+        clickBigFAB();
+    }
+
+    private void clickFabSpeedDial2() {
+        selectAll();
+        clickFabSpeedDial1();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        if(mImagesToProcess != null)
+            outState.putStringArrayList(PHOTOS_LIST_KEY, mImagesToProcess);
+
+        if(selectedPaths != null)
+            outState.putStringArrayList(SELECTED_PHOTOS_KEY, selectedPaths);
+
+        outState.putBoolean(FAB_PRESSED_KEY, wasFABPressed);
+
+        outState.putBoolean(PROGRESSBAR_SHOWING_KEY, loadingBar.getVisibility() == View.VISIBLE);
+
+        //Dejamos que se guarden los valores por defecto (texto introdcido en un EditText, etc)
+        super.onSaveInstanceState(outState);
     }
 }

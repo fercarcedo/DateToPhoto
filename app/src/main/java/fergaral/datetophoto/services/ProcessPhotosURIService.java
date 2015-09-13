@@ -6,12 +6,14 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -47,6 +49,7 @@ import java.util.Date;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.MyActivity;
+import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.exif.ExifInterface;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.receivers.PowerConnectionReceiver;
@@ -70,6 +73,8 @@ public class ProcessPhotosURIService extends IntentService {
     private int total, actual;
     private ProgressChangedListener secondListener;
     private NotificationUtils mNotificationUtils;
+    private boolean wasLarge;
+    private boolean wasPathFound = true;
 
     public ProcessPhotosURIService() {
         super("ProcessPhotosURIService");
@@ -219,6 +224,8 @@ public class ProcessPhotosURIService extends IntentService {
             secondListener.reportTotal(total);
         }
 
+        boolean isHoneycomb = Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB;
+
         for (Uri uri : galleryImages) {
             if (!dialogCancelled) {
 
@@ -272,7 +279,8 @@ public class ProcessPhotosURIService extends IntentService {
 
                 tempStr += uri.toString() + " -> ";
 
-                myBitmap = convertToMutable(myBitmap);
+                if(!isHoneycomb)
+                    myBitmap = convertToMutable(myBitmap);
 
                 String date = "";
                 String exifDate = "";
@@ -335,11 +343,67 @@ public class ProcessPhotosURIService extends IntentService {
                 if(!file2.exists())
                     file2.mkdir();
 
-                savePhoto(bitmap2, Environment.getExternalStorageDirectory().getPath() + "/DateToPhoto", "dtp-" + exifDate + ".jpg");
+                boolean hasRealPath = false;
+                String filePath = "";
 
                 try {
-                    android.media.ExifInterface exifInterface = new android.media.ExifInterface(new File(
-                            Environment.getExternalStorageDirectory().getPath() + "/DateToPhoto/" + "dtp-" + exifDate + ".jpg").getAbsolutePath());
+                    filePath = Utils.getRealPathFromURI(this, uri);
+
+                    if (filePath != null) {
+                        //Hay ruta real
+                        hasRealPath = true;
+                        SQLiteDatabase db = new DatabaseHelper(this).getWritableDatabase();
+                        ContentValues values = new ContentValues();
+                        values.put(DatabaseHelper.PATH_COLUMN, filePath);
+
+                        db.insert(DatabaseHelper.TABLE_NAME, null, values);
+                        db.close();
+                    } else {
+                        Log.d("TAG", "No hay ruta real");
+                    }
+                } catch (Exception e) {
+                    //No hay ruta real, pasamos
+                    Log.d("TAG", "No hay ruta real");
+                }
+
+                if(!hasRealPath) {
+                    wasPathFound = false;
+                    savePhoto(bitmap2, Environment.getExternalStorageDirectory().getPath() + "/DateToPhoto", "dtp-" + exifDate + ".jpg");
+                }else{
+                    File imgFile = new File(filePath);
+                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                    boolean overwritePhotos = prefs.getBoolean(getString(R.string.pref_overwrite_key), true);
+                    boolean keepLargePhoto = prefs.getBoolean(getString(R.string.pref_keeplargephoto_key), true);
+                    keepLargePhoto = keepLargePhoto && wasLarge;
+
+                    if(overwritePhotos && !keepLargePhoto) {
+                        savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), imgFile.getName());
+                    }else{
+                        savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtp-" + imgFile.getName());
+                    }
+                }
+
+                try {
+                    android.media.ExifInterface exifInterface;
+
+                    if(!hasRealPath) {
+                        exifInterface = new android.media.ExifInterface(new File(
+                                Environment.getExternalStorageDirectory().getPath() + "/DateToPhoto/" + "dtp-" + exifDate + ".jpg").getAbsolutePath());
+                    }else{
+                        File imgFile = new File(filePath);
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                        boolean overwritePhotos = prefs.getBoolean(getString(R.string.pref_overwrite_key), true);
+                        boolean keepLargePhoto = prefs.getBoolean(getString(R.string.pref_keeplargephoto_key), true);
+                        keepLargePhoto = keepLargePhoto && wasLarge;
+
+                        if(overwritePhotos && !keepLargePhoto) {
+                            exifInterface = new android.media.ExifInterface(imgFile.getAbsolutePath());
+                        }else{
+                            exifInterface = new android.media.ExifInterface(
+                                    imgFile.getParentFile().getAbsolutePath() + "/dtp-" + imgFile.getName()
+                            );
+                        }
+                    }
                     exifInterface.setAttribute(android.media.ExifInterface.TAG_MAKE, "dtp-");
                     exifInterface.setAttribute(android.media.ExifInterface.TAG_ORIENTATION,
                             String.valueOf(orientationAndroidExif));
@@ -371,7 +435,6 @@ public class ProcessPhotosURIService extends IntentService {
 
             if (showNotif)
                 mNotificationUtils.setNotificationProgress(total, actual);
-
         }
 
         end(intent);
@@ -587,7 +650,7 @@ public class ProcessPhotosURIService extends IntentService {
         }
 
         if (secondListener != null) {
-            secondListener.reportEnd(true);
+            secondListener.reportEnd(!wasPathFound);
         }
 
         if (dialogCancelled)
@@ -610,7 +673,7 @@ public class ProcessPhotosURIService extends IntentService {
         long freeMemory = maxMemory - usedMemory;
 
         long imageSize = (imageWidth * imageHeight * 4) / 1024; //Este valor era 12 unidades menos que el que debía ser
-        boolean wasLarge = false;
+        wasLarge = false;
 
         if (imageSize >= freeMemory) {
             wasLarge = true;
@@ -627,7 +690,10 @@ public class ProcessPhotosURIService extends IntentService {
         int reduction = (int) Math.ceil((double) previousSize / imageSize);
 
         options = new BitmapFactory.Options();
-        //options.inMutable = true;
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
+            options.inMutable = true;
+
         options.inPreferredConfig = Bitmap.Config.ARGB_8888;
 
         if (wasLarge)
