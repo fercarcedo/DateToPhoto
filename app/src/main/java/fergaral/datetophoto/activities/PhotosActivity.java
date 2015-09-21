@@ -17,6 +17,7 @@ import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
@@ -40,6 +41,7 @@ import com.afollestad.materialdialogs.MaterialDialog;
 import com.andexert.library.RippleView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.github.lzyzsd.circleprogress.DonutProgress;
 import com.software.shell.fab.ActionButton;
 
 import java.io.File;
@@ -50,6 +52,7 @@ import fergaral.datetophoto.R;
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.fragments.LoadPhotosFragment;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
+import fergaral.datetophoto.receivers.ActionCancelReceiver;
 import fergaral.datetophoto.services.RegisterPhotoURIIntoDBService;
 import fergaral.datetophoto.utils.CircularProgressWheel;
 import fergaral.datetophoto.utils.PhotoUtils;
@@ -63,6 +66,7 @@ import fergaral.datetophoto.utils.Utils;
 public class PhotosActivity extends AppCompatActivity implements ProgressChangedListener,
                                                                     LoadPhotosFragment.TaskCallbacks {
 
+    private static final String IS_REFRESHING_KEY = "isRefreshing";
     private static final String PROGRESSBAR_SHOWING_KEY = "progressBarShowing";
     private static final String LOAD_PHOTOS_FRAGMENT_TAG = "loadPhotosFragment";
     private static final String PHOTOS_LIST_KEY = "photosList";
@@ -87,6 +91,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private Intent mIntent;
     private ArrayList<String> mImagesToProcess;
     private LoadPhotosFragment loadPhotosFragment;
+    private boolean isRefreshing;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -106,6 +111,13 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
         coverView = findViewById(R.id.coverView);
         progressCircle = (ProgressCircle) findViewById(R.id.progressCircle);
+
+        progressCircle.setOnCancelListener(new ProgressCircle.OnCancelListener() {
+            @Override
+            public void onCancel(View view) {
+                sendBroadcast(new Intent(PhotosActivity.this, ActionCancelReceiver.class));
+            }
+        });
 
         coverView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -174,6 +186,11 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         mIntent = intent;
         mSavedInstanceState = savedInstanceState;
 
+        if(savedInstanceState != null && savedInstanceState.containsKey(IS_REFRESHING_KEY))
+            isRefreshing = savedInstanceState.getBoolean(IS_REFRESHING_KEY, true);
+        else
+            isRefreshing = true;
+
         if(searchPhotos) {
             //Mostramos un diálogo preguntando si usaron Date To Photo previamente, pero solo si es la primera vez que
             //se abre la app (porque sería un DialogFragment y se mantiene intacto en rotaciones, etc)
@@ -181,7 +198,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 new FirstUseDialogFragment().show(getSupportFragmentManager(), FirstUseDialogFragment.class.getSimpleName());
             }
         }else{
-            if(savedInstanceState != null && savedInstanceState.containsKey(PHOTOS_LIST_KEY)) {
+            if(!isRefreshing && savedInstanceState != null && savedInstanceState.containsKey(PHOTOS_LIST_KEY)) {
                 mImagesToProcess = savedInstanceState.getStringArrayList(PHOTOS_LIST_KEY);
 
                 if(mImagesToProcess != null && mImagesToProcess.size() > 0) {
@@ -202,7 +219,6 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     }
 
                     photosGrid.setAdapter(new PhotosAdapter(mImagesToProcess));
-                    photosGrid.setNumColumns(Utils.landscape(this) ? 5 : 3);
                     processPhotosBtn.show();
                 }else{
                     noPhotosTextView.setVisibility(View.VISIBLE);
@@ -314,12 +330,15 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
     @Override
     public void onPostExecute(ArrayList<String> imagesToProcess) {
+
+        if(isRefreshing)
+            isRefreshing = false;
+
         mImagesToProcess = imagesToProcess;
 
         if(!PhotosActivity.IS_PROCESSING) {
             photosGrid.setVisibility(View.VISIBLE);
             photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
-            photosGrid.setNumColumns(Utils.landscape(PhotosActivity.this) ? 5 : 3);
         }
 
         if (loadingBar.getVisibility() == View.VISIBLE)
@@ -633,32 +652,17 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     usedPreviouslyDialog.dismiss();
 
                     //Buscamos si hay fotos sin fechar
-                    Utils.searchForAlreadyProcessedPhotos(getActivity(), new ProgressChangedListener() {
-                        private int total;
 
-                        @Override
-                        public void reportTotal(final int total) {
-                            activity.showProgress(total, "Buscando fotos ya fechadas...");
-                        }
-
-                        @Override
-                        public void onProgressChanged(final int progress) {
-                            activity.progressCircle.setActual(getActivity(), progress);
-                        }
-
-                        @Override
-                        public void reportEnd(boolean fromActionShare) {
-                            activity.hideProgress();
-                            activity.refreshGrid();
-
-                            activity.checkSharedPhotos(activity.mSavedInstanceState, activity.mIntent);
-                        }
-                    });
 
                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putBoolean("searchPhotosFirstUse", false);
                     editor.apply();
+
+                    Intent searchPhotosIntent = new Intent(getActivity(), ProgressActivity.class);
+                    searchPhotosIntent.putExtra(ProgressActivity.SEARCH_PHOTOS_KEY, true);
+
+                    startActivity(searchPhotosIntent);
                 }
             });
 
@@ -701,10 +705,16 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     private void refreshGrid() {
-        if(loadPhotosFragment != null)
+        if(loadPhotosFragment != null) {
             loadPhotosFragment.refresh();
-        else
-            Log.d("TAG", "loadPhotosFragment null");
+            isRefreshing = true;
+        }else {
+            createLoadPhotosFragment();
+            if (loadPhotosFragment != null) {
+                loadPhotosFragment.refresh();
+                isRefreshing = true;
+            }
+        }
 
         PhotosActivity.SHOULD_REFRESH_GRID = false;
         hideNoPhotosTextView = true;
@@ -723,13 +733,17 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private void clickFabSpeedDial1() {
         //Se pulsó el botón de fechar las fotos seleccionadas
         //Arrancamos el servicio de fechar fotos con las imágenes seleccionadas
-        clearSelectedPhotos();
+        /*clearSelectedPhotos();
         processPhotosBtn.hide();
 
         Utils.startProcessPhotosService(PhotosActivity.this, PhotosActivity.this, selectedPaths);
 
         //Ocultamos los botones (es equivalente a pulsar el FAB grande)
-        clickBigFAB();
+        clickBigFAB();*/
+
+        Intent progressActivityIntent = new Intent(this, ProgressActivity.class);
+        progressActivityIntent.putStringArrayListExtra(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
+        startActivity(progressActivityIntent);
     }
 
     private void clickFabSpeedDial2() {
@@ -749,7 +763,24 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         outState.putBoolean(PROGRESSBAR_SHOWING_KEY, loadingBar.getVisibility() == View.VISIBLE);
 
+        outState.putBoolean(IS_REFRESHING_KEY, isRefreshing);
+
         //Dejamos que se guarden los valores por defecto (texto introdcido en un EditText, etc)
         super.onSaveInstanceState(outState);
+    }
+
+    public void createLoadPhotosFragment() {
+        //Iniciamos la AsyncTask (en el Headless Fragment)
+        loadPhotosFragment = (LoadPhotosFragment) getSupportFragmentManager()
+                .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG);
+
+        if(loadPhotosFragment == null) {
+            //Todavía no hemos creado el Fragment. Lo creamos e iniciamos la AsyncTask
+            loadPhotosFragment = new LoadPhotosFragment();
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .add(loadPhotosFragment, LOAD_PHOTOS_FRAGMENT_TAG)
+                    .commit();
+        }
     }
 }

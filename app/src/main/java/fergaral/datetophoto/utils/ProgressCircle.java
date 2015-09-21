@@ -24,8 +24,10 @@ public class ProgressCircle extends LinearLayout {
 
     private DonutProgress donutProgress;
     private TextView progTv, titleTv;
+    private TextView cancelBtn;
     private int total;
     private int actual;
+    private OnCancelListener onCancelListener;
 
     public ProgressCircle(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -38,6 +40,14 @@ public class ProgressCircle extends LinearLayout {
         donutProgress = (DonutProgress) view.findViewById(R.id.progress_circle);
         progTv = (TextView) view.findViewById(R.id.progress_circle_progtv);
         titleTv = (TextView) view.findViewById(R.id.progress_circle_titletv);
+        cancelBtn = (TextView) view.findViewById(R.id.cancel_btn);
+
+        cancelBtn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                cancel(v);
+            }
+        });
     }
 
     public void setTotal(int total) {
@@ -58,5 +68,20 @@ public class ProgressCircle extends LinearLayout {
             progTv.setText(actual + "/" + total);
             ProgressCircle.this.actual = actual;
         }
+    }
+
+    public void setOnCancelListener(OnCancelListener listener) {
+        onCancelListener = listener;
+    }
+
+    public void cancel(View view) {
+        setTitle("Cancelando...");
+
+        if(onCancelListener != null)
+            onCancelListener.onCancel(view);
+    }
+
+    public static abstract class OnCancelListener {
+        public abstract void onCancel(View view);
     }
 }
