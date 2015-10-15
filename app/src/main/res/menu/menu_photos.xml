@@ -8,10 +8,6 @@
         app:showAsAction="ifRoom"
         android:icon="@drawable/ic_action_refresh_24px" />
 
-   <item android:id="@+id/action_diskspaceusage"
-        android:title="Espacio en disco"
-        app:showAsAction="never" />
-
     <item android:id="@+id/action_settings"
         android:title="@string/action_settings"
         android:orderInCategory="100"
@@ -20,11 +16,6 @@
     <item android:id="@+id/action_about"
         android:title="Acerca de"
         android:orderInCategory="101"
-        app:showAsAction="never" />
-
-    <item android:id="@+id/action_tutorial"
-        android:title="Tutorial"
-        android:orderInCategory="102"
         app:showAsAction="never" />
 
 </menu>

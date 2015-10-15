@@ -17,7 +17,7 @@
         <attr name="circularImageViewStyle" format="reference"></attr>
     </declare-styleable>
 
-    <declare-styleable name="ProgressWheel">
+    <declare-styleable name="CircularProgressWheel">
         <attr name="matProg_progressIndeterminate" format="boolean" />
         <attr name="matProg_barColor" format="color" />
         <attr name="matProg_rimColor" format="color" />

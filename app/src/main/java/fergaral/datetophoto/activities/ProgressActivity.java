@@ -54,13 +54,18 @@ public class ProgressActivity extends AppCompatActivity implements ProgressListe
             if(savedInstanceState.containsKey(ProgressActivity.TOTAL_KEY))
                 total = savedInstanceState.getInt(ProgressActivity.TOTAL_KEY);
 
-            if(savedInstanceState.containsKey(ProgressActivity.PROGRESS_KEY))
+            if(savedInstanceState.containsKey(ProgressActivity.PROGRESS_KEY)) {
                 progress = savedInstanceState.getInt(ProgressActivity.PROGRESS_KEY);
+                progressCircle.setProgress(progress);
+            }
 
             if(savedInstanceState.containsKey(ProgressActivity.ACTUAL_KEY))
                 actual = savedInstanceState.getInt(ProgressActivity.ACTUAL_KEY);
 
             searchPhotos = savedInstanceState.getBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, false);
+
+            if(total != 0)
+                progTv.setText(actual + "/" + total);
         }
 
         cancelBtn.setOnClickListener(new View.OnClickListener() {

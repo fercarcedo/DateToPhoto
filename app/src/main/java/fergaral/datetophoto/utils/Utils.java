@@ -274,8 +274,8 @@ public final class Utils {
     public static boolean isAlreadyDatestamped(Context context, File imgFile, SQLiteDatabase photosDb) {
         //Primero comprobamos si su extensión no es jpg o png o si su nombre empieza por dtp-, en cuyo caso la consideramos como fechada
 
-        if(!(imgFile.getName().endsWith(".jpg") || imgFile.getName().endsWith(".jpeg") || imgFile.getName().endsWith(".png"))
-                || imgFile.getName().startsWith("dtp-"))
+        if(!(imgFile.getName().toLowerCase().endsWith(".jpg") || imgFile.getName().toLowerCase().endsWith(".jpeg") ||
+                imgFile.getName().toLowerCase().endsWith(".png")) || imgFile.getName().startsWith("dtp-"))
             return true;
 
         File imgFileWithDate = new File(imgFile.getParentFile().getAbsolutePath() + "/dtp-" + imgFile.getName());
@@ -285,7 +285,7 @@ public final class Utils {
 
         //Comprobamos si el nombre de la imagen está en la base de datos
         if(photosDb == null || !photosDb.isOpen())
-            photosDb = new DatabaseHelper(context, DatabaseHelper.DB_NAME, null, DatabaseHelper.CURRENT_VERSION).getReadableDatabase();
+            photosDb = new DatabaseHelper(context).getReadableDatabase();
 
         String searchQuery = "SELECT * FROM " + DatabaseHelper.TABLE_NAME + " WHERE " + DatabaseHelper.PATH_COLUMN + "=?";
 

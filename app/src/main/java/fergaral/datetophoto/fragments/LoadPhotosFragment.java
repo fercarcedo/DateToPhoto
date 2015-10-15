@@ -67,6 +67,9 @@ public class LoadPhotosFragment extends Fragment {
 
         @Override
         protected ArrayList<String> doInBackground(Void... voids) {
+            if(getActivity() == null)
+                return new ArrayList<>();
+
             SQLiteDatabase photosDb = new DatabaseHelper(getActivity()).getReadableDatabase();
 
             ArrayList<String> cameraImages = new PhotoUtils(getActivity()).getCameraImages();

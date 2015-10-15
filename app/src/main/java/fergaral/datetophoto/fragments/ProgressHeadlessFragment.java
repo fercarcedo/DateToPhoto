@@ -1,8 +1,8 @@
 package fergaral.datetophoto.fragments;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 
 import java.util.ArrayList;
 
@@ -21,15 +21,7 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
     private ProgressListener mListener;
     private ArrayList<String> selectedPaths;
     private int total;
-    private boolean searchPhotos;
-
-    @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-
-        //La Activity debe implementar ProgressChangedListener
-        mListener = (ProgressListener) activity;
-    }
+    private boolean searchPhotos, shareAction;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -41,21 +33,37 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
         Bundle arguments = getArguments();
         searchPhotos = arguments.getBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, false);
 
-        if(arguments.containsKey(ProgressHeadlessFragment.SELECTED_PATHS_KEY))
-            selectedPaths = arguments.getStringArrayList(ProgressHeadlessFragment.SELECTED_PATHS_KEY);
+        if(arguments.containsKey(ProgressActivity.SELECTED_PATHS_KEY))
+            selectedPaths = arguments.getStringArrayList(ProgressActivity.SELECTED_PATHS_KEY);
 
-        if(!searchPhotos)
-            Utils.startProcessPhotosService(getActivity(), this, selectedPaths);
-        else
+        if(arguments.containsKey(PhotosActivity.ACTION_SHARE_KEY))
+            shareAction = arguments.getBoolean(PhotosActivity.ACTION_SHARE_KEY, false);
+
+        Log.d("TAG", "containsSearch: " + arguments.containsKey(ProgressActivity.SEARCH_PHOTOS_KEY));
+        Log.d("TAG", "containsSelectedPaths: " + arguments.containsKey(ProgressActivity.SELECTED_PATHS_KEY));
+        Log.d("TAG", "selectedPaths!=null" + (selectedPaths != null));
+
+        if(!searchPhotos) {
+            if(!shareAction)
+                Utils.startProcessPhotosService(getActivity(), this, selectedPaths);
+            else
+                Utils.startProcessPhotosURIService(getActivity(), this, selectedPaths);
+        }else
             Utils.searchForAlreadyProcessedPhotos(getActivity(), this);
     }
 
     @Override
-    public void onDetach() {
-        super.onDetach();
+    public void onActivityCreated(Bundle savedInstanceState)
+    {
+        super.onActivityCreated(savedInstanceState);
+        if(getTargetFragment() instanceof ProgressListener)
+            mListener = (ProgressListener)getTargetFragment();
+    }
 
-        //Asignamos a la callback null, para evitar que el GC no
-        //pueda recolectar la Activity en desuso (p.ej., durate una rotación)
+    @Override
+    public void onDetach()
+    {
+        super.onDetach();
         mListener = null;
     }
 
@@ -80,5 +88,10 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
     public void reportEnd(boolean fromActionShare) {
         if(mListener != null)
             mListener.reportEnd(fromActionShare);
+
+        getFragmentManager()
+                .beginTransaction()
+                .remove(this)
+                .commit();
     }
 }

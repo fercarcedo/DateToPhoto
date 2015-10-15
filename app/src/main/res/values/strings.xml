@@ -15,9 +15,9 @@
     <string name="pref_shownotification_title">Mostrar notificación</string>
     <string name="pref_shownotification_summary">Mostrar una notificación cuando se estén procesando las fotos</string>
     <string name="pref_keeplargephoto_key">keeplargephoto</string>
-    <string name="pref_keeplargephoto_title">Fotos muy grandes</string>
+    <string name="pref_keeplargephoto_title">Conservar fotos muy grandes</string>
     <string name="pref_keeplargephoto_summary">Si la foto es muy grande, conservar la foto en su tamaño original y crear
-    una copia con fecha, pero más pequeña</string>
+    una copia con fecha, pero más pequeña (la foto se duplicará)</string>
     <string name="title_activity_about">Acerca de</string>
     <string name="title_activity_settings">Opciones</string>
     <string name="pref_folderstoprocess_key">folderstoprocess</string>

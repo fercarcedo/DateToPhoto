@@ -13,6 +13,7 @@ import android.util.Log;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -200,9 +201,13 @@ public class FoldersListPreference extends ListPreference {
 
     private void setFoldersSummary() {
         String[] foldersToProcess = Utils.getFoldersToProcess(mContext);
+        ArrayList<String> folders = PhotoUtils.getFolders(mContext);
 
         if(foldersToProcess.length != 1) {
-            setSummary(foldersToProcess.length + " carpetas");
+            if(foldersToProcess.length != folders.size())
+                setSummary(foldersToProcess.length + " carpetas");
+            else
+                setSummary("Todas");
         }else{
             if(foldersToProcess[0].equals(""))
                 setSummary("0 carpetas");

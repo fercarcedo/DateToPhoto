@@ -34,7 +34,9 @@ import android.util.Log;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -57,6 +59,7 @@ import fergaral.datetophoto.utils.Utils;
 
 public class ProcessPhotosService extends IntentService {
 
+    private static final boolean LOG = true;
     private static final int NOTIFICATION_ID = 1;
     public static final String ACTION_CANCEL_CHARGER_DISCONNECTED = "cancel_charger_disconnected";
     public static final String CANCEL_SERVICE = "cancel";
@@ -77,6 +80,7 @@ public class ProcessPhotosService extends IntentService {
     private Paint paint;
     private SQLiteDatabase photosDb;
     private NotificationUtils mNotificationUtils;
+    private PrintWriter printWriter;
 
     public ProcessPhotosService() {
         super("ProcessPhotosService");
@@ -146,6 +150,8 @@ public class ProcessPhotosService extends IntentService {
             Cursor cursor = db.rawQuery("SELECT " + DatabaseHelper.PATH_COLUMN + " FROM " +
                     DatabaseHelper.TABLE_NAME, null);
 
+            Log.d("TAG", "DBsize: " + cursor.getCount());
+
             if (!cursor.moveToFirst()) {
                 cursor.close();
 
@@ -157,7 +163,7 @@ public class ProcessPhotosService extends IntentService {
         }
 
         if(showNotif)
-            mNotificationUtils.showProgressNotification("Procesando tus fotos en segundo plano...");
+            mNotificationUtils.showSearchingPhotosNotification("Buscando fotos sin fechar...");
 
         ArrayList<String> galleryImages;
 
@@ -201,10 +207,23 @@ public class ProcessPhotosService extends IntentService {
 
             boolean isHoneycomb = Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB;
 
+            if(showNotif)
+                mNotificationUtils.showProgressNotification("Procesando fotos...");
+
             for (String s : galleryImages) {
                 File imgFile = new File(s);
                 if (imgFile.exists() && !dialogCancelled && !cancelledCharger) {
 
+                    if(LOG) {
+                        try {
+                            printWriter = new PrintWriter(new FileWriter(Environment.getExternalStorageDirectory().getPath()
+                            + File.separator + "Download" + File.separator + "dtptimes.txt"));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    long startTime = System.currentTimeMillis();
 
                     //if (!Utils.isAlreadyDatestamped(imgFile)) {
 
@@ -260,7 +279,14 @@ public class ProcessPhotosService extends IntentService {
                     if (wasLarge)
                         options.inSampleSize = reduction;
 
+                    long startTimeDecode = System.currentTimeMillis();
+
                     Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath(), options);
+
+                    long timeDecode = System.currentTimeMillis() - startTimeDecode; //En ms
+                    double timeElapsedDecode = timeDecode / 1000d;
+
+                    printWriter.println("decode image: " + timeElapsedDecode);
 
                     if (myBitmap == null) {
                         actual++;
@@ -301,10 +327,17 @@ public class ProcessPhotosService extends IntentService {
                         e.printStackTrace();
                     }
 
+                    long startTimeWriteDate =  System.currentTimeMillis();
+
                     Bitmap bitmap2 = writeDateOnBitmap(myBitmap, date, rotation);
 
+                    long endTimeWriteDate = System.currentTimeMillis() - startTimeWriteDate;
+                    double elapsedTimeWriteDate = endTimeWriteDate / 1000d;
+
+                    printWriter.println("write date: " + elapsedTimeWriteDate);
+
                     //Este método sirve para comprobar la rotación con la segunda interfaz EXIF
-                    testEXIFDate(imgFile.getAbsolutePath());
+                    //testEXIFDate(imgFile.getAbsolutePath());
 
                     myBitmap = null;
 
@@ -317,6 +350,8 @@ public class ProcessPhotosService extends IntentService {
                                 );
                             }*/
 
+                    long startTimeSavePhoto = System.currentTimeMillis();
+
                     if (Utils.overwritePhotos(this) && !keepLargePhoto) {
                         savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtpo-" + imgFile.getName(), imgFile, true
                         );
@@ -327,6 +362,11 @@ public class ProcessPhotosService extends IntentService {
                         );
                     }
 
+                    long endTimeSavePhoto = System.currentTimeMillis() - startTimeSavePhoto;
+                    double elapsedTimeSavePhoto = endTimeSavePhoto / 1000d;
+
+                    printWriter.println("save photo: " + elapsedTimeSavePhoto);
+
                     bitmap2 = null;
 
                            /* if(Utils.overwritePhotos(this))
@@ -335,6 +375,13 @@ public class ProcessPhotosService extends IntentService {
                             }*/
                     //}
                     //}
+
+                    long endTime = System.currentTimeMillis() - startTime;
+                    double elapsedEndTime = endTime / 1000d;
+
+                    printWriter.println("total: " + elapsedEndTime);
+
+                    printWriter.close();
                 }
 
                 actual++;

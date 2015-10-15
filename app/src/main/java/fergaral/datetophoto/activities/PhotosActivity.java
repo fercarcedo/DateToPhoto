@@ -1,47 +1,34 @@
 package fergaral.datetophoto.activities;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.app.Dialog;
-import android.content.Context;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
-import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
-import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.app.FragmentManager;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.AppCompatSpinner;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
-import android.text.method.HideReturnsTransformationMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
-import android.view.animation.AccelerateDecelerateInterpolator;
+import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
-import com.andexert.library.RippleView;
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.github.lzyzsd.circleprogress.DonutProgress;
 import com.software.shell.fab.ActionButton;
 
 import java.io.File;
@@ -49,14 +36,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import fergaral.datetophoto.R;
-import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.fragments.LoadPhotosFragment;
+import fergaral.datetophoto.fragments.ProgressHeadlessFragment;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.receivers.ActionCancelReceiver;
-import fergaral.datetophoto.services.RegisterPhotoURIIntoDBService;
 import fergaral.datetophoto.utils.CircularProgressWheel;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.ProgressCircle;
+import fergaral.datetophoto.utils.ProgressListener;
 import fergaral.datetophoto.utils.TickedImageView;
 import fergaral.datetophoto.utils.Utils;
 
@@ -66,6 +53,7 @@ import fergaral.datetophoto.utils.Utils;
 public class PhotosActivity extends AppCompatActivity implements ProgressChangedListener,
                                                                     LoadPhotosFragment.TaskCallbacks {
 
+    public static final String ACTION_SHARE_KEY = "actionshare";
     private static final String IS_REFRESHING_KEY = "isRefreshing";
     private static final String PROGRESSBAR_SHOWING_KEY = "progressBarShowing";
     private static final String LOAD_PHOTOS_FRAGMENT_TAG = "loadPhotosFragment";
@@ -81,17 +69,15 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private boolean wasFABPressed;
     private ActionButton processPhotosBtn, fabSpeedDial1, fabSpeedDial2;
     private View coverView;
-    private int mNumberOfColumns;
     private CardView cardSpeedDial1, cardSpeedDial2;
-    private ProgressCircle progressCircle;
-    private CircularProgressWheel loadingBar;
-    private TextView noPhotosTextView;
     private boolean hideNoPhotosTextView;
+    private com.vlonjatg.progressactivity.ProgressActivity progressActivity;
     private Bundle mSavedInstanceState;
     private Intent mIntent;
     private ArrayList<String> mImagesToProcess;
     private LoadPhotosFragment loadPhotosFragment;
     private boolean isRefreshing;
+    private CircularProgressWheel loadingProgBar;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -101,23 +87,20 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         Toolbar toolbar = (Toolbar) findViewById(R.id.tool_bar);
         setSupportActionBar(toolbar);
 
+        AppCompatSpinner foldersSpinner = (AppCompatSpinner) findViewById(R.id.foldersSpinner);
+
+        ArrayList<String> folders = PhotoUtils.getFolders(this);
+        folders.add(0, "Todas las fotos");
+        foldersSpinner.setAdapter(new ArrayAdapter<String>(this, R.layout.spinner_row, folders));
+
         PhotoUtils.selectAllFoldersOnFirstUse(this);
 
-        noPhotosTextView = (TextView) findViewById(R.id.nophotostv);
-        mNumberOfColumns = Utils.landscape(PhotosActivity.this) ? 5 : 3;
+        progressActivity = (com.vlonjatg.progressactivity.ProgressActivity) findViewById(R.id.prog_activ);
+        loadingProgBar = (CircularProgressWheel) findViewById(R.id.loading_photos_prog_bar);
         processPhotosBtn = (ActionButton) findViewById(R.id.btnProcessSelectedPhotos);
-        loadingBar = (CircularProgressWheel) findViewById(R.id.loadingPhotosProgressBar);
         fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
         coverView = findViewById(R.id.coverView);
-        progressCircle = (ProgressCircle) findViewById(R.id.progressCircle);
-
-        progressCircle.setOnCancelListener(new ProgressCircle.OnCancelListener() {
-            @Override
-            public void onCancel(View view) {
-                sendBroadcast(new Intent(PhotosActivity.this, ActionCancelReceiver.class));
-            }
-        });
 
         coverView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -221,7 +204,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     photosGrid.setAdapter(new PhotosAdapter(mImagesToProcess));
                     processPhotosBtn.show();
                 }else{
-                    noPhotosTextView.setVisibility(View.VISIBLE);
+                    showNoPhotosScreen();
                 }
             }else {
                 //Iniciamos la AsyncTask (en el Headless Fragment)
@@ -240,8 +223,10 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     if(savedInstanceState != null && savedInstanceState.containsKey(PROGRESSBAR_SHOWING_KEY)) {
                         boolean wasProgressBarShowing = savedInstanceState.getBoolean(PROGRESSBAR_SHOWING_KEY);
 
-                        if(wasProgressBarShowing)
-                            loadingBar.setVisibility(View.VISIBLE);
+                        if(wasProgressBarShowing) {
+                            showLoading();
+                        }
+
                     }
                 }
             }
@@ -259,17 +244,11 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch(item.getItemId()) {
-            case R.id.action_diskspaceusage:
-                Utils.startActivityCompat(this, new Intent(this, DiskSpaceUsageActivity.class));
-                break;
             case R.id.action_settings:
                 Utils.startActivityCompat(this, new Intent(this, SettingsActivity.class));
                 break;
             case R.id.action_about:
                 showAboutDialog();
-                break;
-            case R.id.action_tutorial:
-                Utils.startActivityCompat(this, new Intent(this, TutorialActivity.class));
                 break;
             case R.id.action_refresh:
                 refreshGrid();
@@ -288,7 +267,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
     @Override
     public void onProgressChanged(final int progress) {
-        progressCircle.setActual(this, progress);
+        //progressCircle.setActual(this, progress);
     }
 
     @Override
@@ -310,7 +289,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         if(adapter != null) {
             if (adapter.isEmpty() && !hideNoPhotosTextView) {
-                noPhotosTextView.setVisibility(View.VISIBLE);
+                showNoPhotosScreen();
             } else if (!adapter.isEmpty()) {
                 processPhotosBtn.show();
             }
@@ -322,9 +301,9 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
     @Override
     public void onPreExecute() {
-        loadingBar.setVisibility(View.VISIBLE);
+        showLoading();
         photosGrid.setVisibility(View.INVISIBLE);
-        noPhotosTextView.setVisibility(View.INVISIBLE);
+        //hideNoPhotosScreen();
         processPhotosBtn.hide();
     }
 
@@ -341,15 +320,16 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
         }
 
-        if (loadingBar.getVisibility() == View.VISIBLE)
-            loadingBar.setVisibility(View.INVISIBLE);
+        progressActivity.showContent();
 
         if(hideNoPhotosTextView)
             hideNoPhotosTextView = false;
 
+        loadingProgBar.setVisibility(View.INVISIBLE);
+
         if(!PhotosActivity.IS_PROCESSING) {
             if (imagesToProcess.size() == 0) {
-                noPhotosTextView.setVisibility(View.VISIBLE);
+                showNoPhotosScreen();
             } else if (imagesToProcess.size() != 0) {
                 processPhotosBtn.show();
             }
@@ -363,8 +343,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             this.images = images;
 
             if(images != null && images.size() != 0) {
-                if(noPhotosTextView != null)
-                    noPhotosTextView.setVisibility(View.INVISIBLE);
+                    hideNoPhotosScreen();
             }
         }
 
@@ -505,8 +484,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         if(imageUri != null) {
             selectedPaths.add(imageUri.toString());
             //Lanzamos el servicio de procesar fotos por URI con la foto
-            Utils.startProcessPhotosURIService(this, this, selectedPaths);
-
+            showProgressDialogShare(selectedPaths);
             /*//Si podemos encontrar la ruta local de la foto, la añadimos a la BD
             Intent addPhotoIntent = new Intent(this, RegisterPhotoURIIntoDBService.class);
 
@@ -530,7 +508,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             }
 
             //Procesamos las fotos
-            Utils.startProcessPhotosURIService(this, this, selectedPaths);
+            showProgressDialogShare(selectedPaths);
 
             /*//Si existe la ruta local de la URI, añadimos la ruta de la foto a la base de datos
             Intent addPhotosIntent = new Intent(this, RegisterPhotoURIIntoDBService.class);
@@ -552,7 +530,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
     private void checkImagesToProcessEmpty(PhotosAdapter adapter) {
         if (adapter.isEmpty() && !hideNoPhotosTextView) {
-            noPhotosTextView.setVisibility(View.VISIBLE);
+            showNoPhotosScreen();
             processPhotosBtn.hide();
         }
     }
@@ -561,14 +539,14 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         PhotosActivity.IS_PROCESSING = true;
 
         photosGrid.setVisibility(View.INVISIBLE);
-        loadingBar.setVisibility(View.INVISIBLE);
+        progressActivity.showContent();
 
         Utils.lockOrientation(this);
 
         //Establecemos el total de fotos a fechar
-        progressCircle.setTotal(total);
-        progressCircle.setVisibility(View.VISIBLE);
-        progressCircle.setTitle(title);
+        //progressCircle.setTotal(total);
+        //progressCircle.setVisibility(View.VISIBLE);
+        //progressCircle.setTitle(title);
     }
 
     private void hideProgress() {
@@ -576,7 +554,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         Utils.unlockOrientation(this);
         photosGrid.setVisibility(View.VISIBLE);
-        progressCircle.setVisibility(View.INVISIBLE);
+        //progressCircle.setVisibility(View.INVISIBLE);
 
         if(PhotosActivity.SHOULD_REFRESH_GRID) {
             //Actualizamos la lista de fotos
@@ -587,7 +565,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     @Override
     protected void onStop() {
         super.onStop();
-        PhotosActivity.SHOULD_REFRESH_GRID = true;
+        PhotosActivity.SHOULD_REFRESH_GRID = false;
     }
 
     @Override
@@ -623,7 +601,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
             return new MaterialDialog.Builder(getActivity())
                     .title("Date To Photo " + versionName)
-                    .content("Desarrollada por Fernando García Álvarez\nTesting por Sergio Artidiello González")
+                    .content("")
                     .positiveText("Aceptar")
                     .iconRes(R.drawable.ic_launcher)
                     .show();
@@ -659,10 +637,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     editor.putBoolean("searchPhotosFirstUse", false);
                     editor.apply();
 
+                    /*
                     Intent searchPhotosIntent = new Intent(getActivity(), ProgressActivity.class);
-                    searchPhotosIntent.putExtra(ProgressActivity.SEARCH_PHOTOS_KEY, true);
+                    searchPhotosIntent.putExtra(ProgressActivity.SEARCH_PHOTOS_KEY, true);*/
 
-                    startActivity(searchPhotosIntent);
+                    PhotosActivity photosActivity = (PhotosActivity) getActivity();
+                    photosActivity.showProgressDialog(true);
                 }
             });
 
@@ -741,9 +721,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         //Ocultamos los botones (es equivalente a pulsar el FAB grande)
         clickBigFAB();*/
 
-        Intent progressActivityIntent = new Intent(this, ProgressActivity.class);
+        /*Intent progressActivityIntent = new Intent(this, ProgressActivity.class);
         progressActivityIntent.putStringArrayListExtra(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
-        startActivity(progressActivityIntent);
+        startActivity(progressActivityIntent);*/
+
+        showProgressDialog(false);
+        clickBigFAB();
     }
 
     private void clickFabSpeedDial2() {
@@ -761,7 +744,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         outState.putBoolean(FAB_PRESSED_KEY, wasFABPressed);
 
-        outState.putBoolean(PROGRESSBAR_SHOWING_KEY, loadingBar.getVisibility() == View.VISIBLE);
+        outState.putBoolean(PROGRESSBAR_SHOWING_KEY, loadingProgBar.getVisibility() == View.VISIBLE);
 
         outState.putBoolean(IS_REFRESHING_KEY, isRefreshing);
 
@@ -781,6 +764,176 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     .beginTransaction()
                     .add(loadPhotosFragment, LOAD_PHOTOS_FRAGMENT_TAG)
                     .commit();
+        }
+    }
+
+    private void showNoPhotosScreen() {
+        progressActivity.showEmpty(getResources().getDrawable(R.drawable.ic_done_white_48px), "No hay fotos sin fechar", "");
+    }
+
+    private void hideNoPhotosScreen() {
+        progressActivity.showContent();
+    }
+
+    private void showLoading() {
+        if(progressActivity.isEmpty()) {
+            progressActivity.showContent();
+            Log.d("TAG", "isEmpty");
+        }
+
+        loadingProgBar.setVisibility(View.VISIBLE);
+        Log.d("TAG", "Loading");
+    }
+
+    private void showProgressDialog(boolean searchPhotos) {
+        ProgressDialogFragment dialogFragment = new ProgressDialogFragment();
+        Bundle args = new Bundle();
+
+        if(searchPhotos) {
+            //Buscamos las fotos sin fechar (es el primer uso)
+            args.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, true);
+        }else{
+            args.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, false);
+            args.putStringArrayList(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
+        }
+
+        dialogFragment.setArguments(args);
+        dialogFragment.show(getSupportFragmentManager(), "progress_dialog");
+    }
+
+    private void showProgressDialogShare(ArrayList<String> selectedPaths) {
+        ProgressDialogFragment dialogFragment = new ProgressDialogFragment();
+        Bundle args = new Bundle();
+
+        args.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, false);
+        args.putStringArrayList(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
+        args.putBoolean(PhotosActivity.ACTION_SHARE_KEY, true);
+
+        dialogFragment.setArguments(args);
+        dialogFragment.show(getSupportFragmentManager(), "progress_dialog");
+    }
+
+    public static class ProgressDialogFragment extends DialogFragment implements ProgressListener {
+        private ProgressHeadlessFragment mHeadless;
+        private boolean searchPhotos, shareAction;
+        private ArrayList<String> selectedPaths;
+        private int total = 100;
+
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            setCancelable(false);
+
+            Bundle arguments = getArguments();
+
+            if(arguments.containsKey(ProgressActivity.SEARCH_PHOTOS_KEY))
+                searchPhotos = arguments.getBoolean(ProgressActivity.SEARCH_PHOTOS_KEY);
+
+            if(searchPhotos)
+                total = new PhotoUtils(getActivity()).getCameraImages().size();
+
+            selectedPaths = new ArrayList<>();
+
+            if(arguments.containsKey(ProgressActivity.SELECTED_PATHS_KEY)) {
+                selectedPaths = arguments.getStringArrayList(ProgressActivity.SELECTED_PATHS_KEY);
+                if(selectedPaths != null)
+                    total = selectedPaths.size();
+            }
+
+            if(arguments.containsKey(PhotosActivity.ACTION_SHARE_KEY))
+                shareAction = arguments.getBoolean(PhotosActivity.ACTION_SHARE_KEY, false);
+        }
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState)
+        {
+            super.onActivityCreated(savedInstanceState);
+
+            FragmentManager fm = getFragmentManager();
+            mHeadless = (ProgressHeadlessFragment) fm.findFragmentByTag("headless");
+
+            if(mHeadless == null){
+                mHeadless = new ProgressHeadlessFragment();
+
+                fm.beginTransaction()
+                        .add(mHeadless, "headless")
+                        .commit();
+
+                Bundle fragmentArgs = new Bundle();
+
+                fragmentArgs.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, searchPhotos);
+                fragmentArgs.putStringArrayList(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
+                fragmentArgs.putBoolean(PhotosActivity.ACTION_SHARE_KEY, shareAction);
+
+                mHeadless.setArguments(fragmentArgs);
+                mHeadless.setTargetFragment(this, 0);
+            }
+        }
+
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState)
+        {
+            MaterialDialog dialog = new MaterialDialog.Builder(getActivity())
+                    .title(searchPhotos ? "Buscando fotos..." : "Fechando fotos...")
+                    .content(searchPhotos ? "Estamos buscando fotos ya fechadas en tu dispositivo"
+                            : "Tus fotos están siendo fechadas. Relájate y haz otras cosas mientras tanto")
+                    .progress(false, total, true)
+                    .build();
+
+            if(!searchPhotos) {
+                dialog.setActionButton(DialogAction.NEGATIVE, "Cancelar");
+                dialog.getActionButton(DialogAction.NEGATIVE).setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        cancelProgress();
+                    }
+                });
+            }
+
+            return dialog;
+        }
+
+        @Override
+        public void reportTotal(int total) {
+            MaterialDialog dialog = (MaterialDialog) getDialog();
+            dialog.setMaxProgress(total);
+        }
+
+        @Override
+        public void onProgressChanged(int progress, int actual) {
+            MaterialDialog dialog = (MaterialDialog) getDialog();
+            dialog.setProgress(actual);
+        }
+
+        @Override
+        public void reportEnd(boolean fromActionShare) {
+            dismiss();
+
+            PhotosActivity photosActivity = (PhotosActivity) getActivity();
+            if(!searchPhotos) {
+                photosActivity.refreshGrid();
+            }else{
+                //Iniciamos la AsyncTask (en el Headless Fragment)
+                photosActivity.loadPhotosFragment = (LoadPhotosFragment) getActivity().getSupportFragmentManager()
+                        .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG);
+
+                if(photosActivity.loadPhotosFragment == null) {
+                    //Todavía no hemos creado el Fragment. Lo creamos e iniciamos la AsyncTask
+                    photosActivity.loadPhotosFragment = new LoadPhotosFragment();
+                    photosActivity.getSupportFragmentManager()
+                            .beginTransaction()
+                            .add(photosActivity.loadPhotosFragment, LOAD_PHOTOS_FRAGMENT_TAG)
+                            .commit();
+                }
+            }
+        }
+
+        private void cancelProgress() {
+            MaterialDialog dialog = (MaterialDialog) getDialog();
+            dialog.setTitle("Cancelando...");
+            dialog.setContent("");
+            getActivity().sendBroadcast(new Intent(getActivity(), ActionCancelReceiver.class));
         }
     }
 }

@@ -75,6 +75,10 @@ public class NotificationUtils {
         setUpNotification(true, true, startText, "Procesando fotos...");
     }
 
+    public void showSearchingPhotosNotification(String text) {
+        setUpNotification(true, false, text, text);
+    }
+
     public void setNotificationProgress(int total, int actual) {
         if(mNotifBuilder != null && mNotifManager != null) {
             long time = System.currentTimeMillis();
