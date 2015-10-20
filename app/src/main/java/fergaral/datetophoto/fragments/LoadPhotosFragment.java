@@ -22,6 +22,7 @@ public class LoadPhotosFragment extends Fragment {
 
     private TaskCallbacks mCallback;
     private ImagesToProcessTask loadPhotosTask;
+    private String selectedFolder;
 
     public interface TaskCallbacks {
         void onPreExecute();
@@ -76,8 +77,15 @@ public class LoadPhotosFragment extends Fragment {
 
             //Obtenemos las fotos sin fechar de entre las que hay que procesar, ya que es más rápido identificar las que hay
             //que procesar, que no las que están sin fechars
-            ArrayList<String> imagesToProcess = Utils.getPhotosWithoutDate(getActivity(),
-                    Utils.getImagesToProcess(getActivity(), cameraImages), photosDb);
+            ArrayList<String> imagesToProcess;
+
+            if(selectedFolder == null) {
+                imagesToProcess = Utils.getPhotosWithoutDate(getActivity(),
+                        Utils.getImagesToProcess(getActivity(), cameraImages), photosDb);
+            }else{
+                imagesToProcess = Utils.getPhotosWithoutDate(getActivity(),
+                        Utils.getImagesToProcess(getActivity(), cameraImages, selectedFolder), photosDb);
+            }
 
             photosDb.close();
 
@@ -100,6 +108,22 @@ public class LoadPhotosFragment extends Fragment {
         }
 
         loadPhotosTask = new ImagesToProcessTask();
+        selectedFolder = null;
         loadPhotosTask.execute();
+    }
+
+    public void load(String folderName) {
+        if(folderName == null) {
+            refresh();
+        }else{
+            if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
+                //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
+                loadPhotosTask.cancel(true);
+            }
+
+            loadPhotosTask = new ImagesToProcessTask();
+            selectedFolder = folderName;
+            loadPhotosTask.execute();
+        }
     }
 }

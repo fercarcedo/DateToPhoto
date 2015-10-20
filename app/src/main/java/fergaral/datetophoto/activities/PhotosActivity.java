@@ -21,6 +21,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
@@ -33,6 +34,7 @@ import com.software.shell.fab.ActionButton;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import fergaral.datetophoto.R;
@@ -53,7 +55,9 @@ import fergaral.datetophoto.utils.Utils;
 public class PhotosActivity extends AppCompatActivity implements ProgressChangedListener,
                                                                     LoadPhotosFragment.TaskCallbacks {
 
+    private static final String SEARCH_PHOTOS_FIRST_USE_KEY = "searchPhotosFirstUse";
     public static final String ACTION_SHARE_KEY = "actionshare";
+    private static final String LAST_SELECTED_SPINNER_POSITION_KEY = "lastSelectedSpinnerPos";
     private static final String IS_REFRESHING_KEY = "isRefreshing";
     private static final String PROGRESSBAR_SHOWING_KEY = "progressBarShowing";
     private static final String LOAD_PHOTOS_FRAGMENT_TAG = "loadPhotosFragment";
@@ -78,6 +82,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private LoadPhotosFragment loadPhotosFragment;
     private boolean isRefreshing;
     private CircularProgressWheel loadingProgBar;
+    private AppCompatSpinner foldersSpinner;
+    private int lastSelectedSpinnerPosition;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -87,11 +93,28 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         Toolbar toolbar = (Toolbar) findViewById(R.id.tool_bar);
         setSupportActionBar(toolbar);
 
-        AppCompatSpinner foldersSpinner = (AppCompatSpinner) findViewById(R.id.foldersSpinner);
+        if(savedInstanceState != null)
+            lastSelectedSpinnerPosition = savedInstanceState.getInt(LAST_SELECTED_SPINNER_POSITION_KEY, 0);
 
-        ArrayList<String> folders = PhotoUtils.getFolders(this);
+        foldersSpinner = (AppCompatSpinner) findViewById(R.id.foldersSpinner);
+
+        final List<String> folders = new ArrayList<String>(Arrays.asList(Utils.getFoldersToProcess(this)));
         folders.add(0, "Todas las fotos");
         foldersSpinner.setAdapter(new ArrayAdapter<String>(this, R.layout.spinner_row, folders));
+        foldersSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if(lastSelectedSpinnerPosition != position) {
+                    refreshGrid();
+                    lastSelectedSpinnerPosition = position;
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
 
         PhotoUtils.selectAllFoldersOnFirstUse(this);
 
@@ -604,7 +627,19 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     .content("")
                     .positiveText("Aceptar")
                     .iconRes(R.drawable.ic_launcher)
-                    .show();
+                    .build();
+        }
+    }
+
+    public static class NoPhotosSelectedDialogFragment extends DialogFragment {
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            return new MaterialDialog.Builder(getActivity())
+                    .title("No has seleccionado ninguna foto")
+                    .content("Selecciona alguna foto para continuar")
+                    .positiveText("Aceptar")
+                    .build();
         }
     }
 
@@ -622,26 +657,20 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     .autoDismiss(true)
                     .build();
 
-            final PhotosActivity activity = (PhotosActivity) getActivity();
+            final PhotosActivity photosActivity = (PhotosActivity) getActivity();
 
             usedPreviouslyDialog.getActionButton(DialogAction.POSITIVE).setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     usedPreviouslyDialog.dismiss();
 
-                    //Buscamos si hay fotos sin fechar
-
-
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.putBoolean("searchPhotosFirstUse", false);
-                    editor.apply();
+                    //Indicamos que ya no hay que preguntar más veces si el usuario ha usado antes la aplicación
+                    photosActivity.setSearchPhotosFirstUse(false);
 
                     /*
                     Intent searchPhotosIntent = new Intent(getActivity(), ProgressActivity.class);
                     searchPhotosIntent.putExtra(ProgressActivity.SEARCH_PHOTOS_KEY, true);*/
 
-                    PhotosActivity photosActivity = (PhotosActivity) getActivity();
                     photosActivity.showProgressDialog(true);
                 }
             });
@@ -651,12 +680,15 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 public void onClick(View v) {
                     usedPreviouslyDialog.dismiss();
 
-                    activity.refreshGrid();
-                    activity.checkSharedPhotos(activity.mSavedInstanceState, activity.mIntent);
+                    //Indicamos que ya no hay que preguntar más veces si el usuario ha usado antes la aplicación
+                    photosActivity.setSearchPhotosFirstUse(false);
+
+                    photosActivity.createLoadPhotosFragment();
+                    photosActivity.checkSharedPhotos(photosActivity.mSavedInstanceState, photosActivity.mIntent);
                 }
             });
 
-            usedPreviouslyDialog.show();
+            //usedPreviouslyDialog.show();
 
             return usedPreviouslyDialog;
         }
@@ -685,15 +717,21 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     private void refreshGrid() {
+        int selectedFolderPosition = foldersSpinner.getSelectedItemPosition();
+        String selectedFolder = (String) foldersSpinner.getSelectedItem();
         if(loadPhotosFragment != null) {
-            loadPhotosFragment.refresh();
+            if(selectedFolderPosition == 0)
+                loadPhotosFragment.refresh();
+            else
+                loadPhotosFragment.load(selectedFolder);
             isRefreshing = true;
         }else {
             createLoadPhotosFragment();
-            if (loadPhotosFragment != null) {
+            if(selectedFolderPosition == 0)
                 loadPhotosFragment.refresh();
-                isRefreshing = true;
-            }
+            else
+                loadPhotosFragment.load(selectedFolder);
+            isRefreshing = true;
         }
 
         PhotosActivity.SHOULD_REFRESH_GRID = false;
@@ -724,8 +762,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         /*Intent progressActivityIntent = new Intent(this, ProgressActivity.class);
         progressActivityIntent.putStringArrayListExtra(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
         startActivity(progressActivityIntent);*/
+        if(selectedPaths == null || selectedPaths.size() == 0)
+            new NoPhotosSelectedDialogFragment().show(getSupportFragmentManager(),
+                    NoPhotosSelectedDialogFragment.class.getSimpleName());
+        else
+            showProgressDialog(false);
 
-        showProgressDialog(false);
         clickBigFAB();
     }
 
@@ -748,6 +790,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         outState.putBoolean(IS_REFRESHING_KEY, isRefreshing);
 
+        outState.putInt(LAST_SELECTED_SPINNER_POSITION_KEY, lastSelectedSpinnerPosition);
         //Dejamos que se guarden los valores por defecto (texto introdcido en un EditText, etc)
         super.onSaveInstanceState(outState);
     }
@@ -914,18 +957,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             if(!searchPhotos) {
                 photosActivity.refreshGrid();
             }else{
-                //Iniciamos la AsyncTask (en el Headless Fragment)
-                photosActivity.loadPhotosFragment = (LoadPhotosFragment) getActivity().getSupportFragmentManager()
-                        .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG);
-
-                if(photosActivity.loadPhotosFragment == null) {
-                    //Todavía no hemos creado el Fragment. Lo creamos e iniciamos la AsyncTask
-                    photosActivity.loadPhotosFragment = new LoadPhotosFragment();
-                    photosActivity.getSupportFragmentManager()
-                            .beginTransaction()
-                            .add(photosActivity.loadPhotosFragment, LOAD_PHOTOS_FRAGMENT_TAG)
-                            .commit();
-                }
+                photosActivity.createLoadPhotosFragment();
+                photosActivity.checkSharedPhotos(photosActivity.mSavedInstanceState, photosActivity.mIntent);
             }
         }
 
@@ -935,5 +968,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
             dialog.setContent("");
             getActivity().sendBroadcast(new Intent(getActivity(), ActionCancelReceiver.class));
         }
+    }
+
+    private void setSearchPhotosFirstUse(boolean searchPhotosFirstUse) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean(SEARCH_PHOTOS_FIRST_USE_KEY, searchPhotosFirstUse);
+        editor.apply();
     }
 }

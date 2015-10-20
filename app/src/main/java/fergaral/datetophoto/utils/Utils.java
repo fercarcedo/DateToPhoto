@@ -200,12 +200,22 @@ public final class Utils {
         return photosWithoutDate;
     }
 
+    public static ArrayList<String> getImagesToProcess(Context context, ArrayList<String> photos, String folderName) {
+        ArrayList<String> imagesToProcess = new ArrayList<>();
+
+        for(String path : photos) {
+            if(PhotoUtils.getParentFolderName(path).equals(folderName))
+                imagesToProcess.add(path);
+        }
+
+        return imagesToProcess;
+    }
+
     public static ArrayList<String> getImagesToProcess(Context context, ArrayList<String> photos)
     {
-        ArrayList<String> imagesToProcess = new ArrayList<String>();
+        ArrayList<String> imagesToProcess = new ArrayList<>();
 
-        for(String path : photos)
-        {
+        for(String path : photos) {
             if(Utils.processSelectedFolder(context, PhotoUtils.getParentFolderName(path)))
                 imagesToProcess.add(path);
         }

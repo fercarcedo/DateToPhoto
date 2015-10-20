@@ -728,15 +728,43 @@ public class ProcessPhotosService extends IntentService {
         try
         {
             out = new FileOutputStream(imageFileName);
+
+            long compressStartTime = System.currentTimeMillis();
+
             bmp.compress(Bitmap.CompressFormat.JPEG, 90, out);
+
+            long compressTimeMillis = System.currentTimeMillis() - compressStartTime;
+            double compressTime = compressTimeMillis / 1000d;
+            printWriter.println("compress image: " + compressTime);
+
             out.flush();
             out.close();
+
+            long moveEXIFStartTime = System.currentTimeMillis();
+
             moveEXIFdata(imageFrom, imageFileName, keepOrientation);
+
+            long moveEXIFTimeMillis = System.currentTimeMillis() - moveEXIFStartTime;
+            double moveEXIFTime = moveEXIFTimeMillis / 1000d;
+            printWriter.println("move exif: " + moveEXIFTime);
+
+            long renameStartTime = System.currentTimeMillis();
 
             if(imageFileName.getName().startsWith("dtpo-"))  //Si se cumple, sobreescribimos
                 imageFileName.renameTo(new File(imageFileName.getParentFile().getAbsolutePath() + "/" + imageFileName.getName().substring(5)));
 
+            long renameTimeMillis = System.currentTimeMillis() - renameStartTime;
+            double renameTime = renameTimeMillis / 1000d;
+            printWriter.println("rename: " + renameTime);
+
+            long scanPhotoStartTime = System.currentTimeMillis();
+
             scanPhoto(imageFileName.toString());
+
+            long scanPhotoTimeMillis = System.currentTimeMillis() - scanPhotoStartTime;
+            double scanPhotoTime = scanPhotoTimeMillis / 1000d;
+            printWriter.println("scan photo: " + scanPhotoTime);
+
             out = null;
         } catch (Exception e)
         {
