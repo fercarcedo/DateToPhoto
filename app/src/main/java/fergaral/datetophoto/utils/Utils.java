@@ -45,6 +45,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.Adler32;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
@@ -178,29 +182,44 @@ public final class Utils {
         return photosWithoutDate;
     }
 
-    public static ArrayList<String> getPhotosWithoutDate(Context context, ArrayList<String> photos, SQLiteDatabase db)
+    public static List<String> getPhotosWithoutDate(Context context, ArrayList<String> photos, SQLiteDatabase db)
     {
-        ArrayList<String> photosWithoutDate = new ArrayList<String>();
+        LinkedList<String> photosWithoutDate = new LinkedList<>(photos);
 
-        for(String path : photos)
-        {
-            File imgFile = new File(path);
+        //Comprobamos si el nombre de la imagen está en la base de datos
+        if(db == null || !db.isOpen())
+            db = new DatabaseHelper(context).getReadableDatabase();
 
-            if (!Utils.isAlreadyDatestamped(context, imgFile, db))
-            {
+        String searchQuery = "SELECT " + DatabaseHelper.PATH_COLUMN + " FROM " + DatabaseHelper.TABLE_NAME;
+
+        Cursor cursor = db.rawQuery(searchQuery, null);
+        if(cursor.moveToFirst()) {
+            do {
+                photosWithoutDate.remove(cursor.getString(0));
+            }while(cursor.moveToNext());
+        }
+        cursor.close();
+
+        LinkedList<String> result = new LinkedList<>(photosWithoutDate);
+
+        for(int i=0; i < photosWithoutDate.size(); i++) {
+            String image = photosWithoutDate.get(i);
+            File imgFile = new File(image);
+            if(!(imgFile.getName().toLowerCase().endsWith(".jpg") || imgFile.getName().toLowerCase().endsWith(".jpeg") ||
+                    imgFile.getName().toLowerCase().endsWith(".png")) || imgFile.getName().startsWith("dtp-"))
+                result.remove(image);
+            else {
                 File imgFileWithDate = new File(imgFile.getParentFile().getAbsolutePath() + "/dtp-" + imgFile.getName());
 
-                if(!imgFileWithDate.exists())
-                {
-                    photosWithoutDate.add(path);
-                }
+                if (imgFileWithDate.exists())
+                    result.remove(image);
             }
         }
 
-        return photosWithoutDate;
+        return result;
     }
 
-    public static ArrayList<String> getImagesToProcess(Context context, ArrayList<String> photos, String folderName) {
+    public static ArrayList<String> getImagesToProcess(Context context, List<String> photos, String folderName) {
         ArrayList<String> imagesToProcess = new ArrayList<>();
 
         for(String path : photos) {
@@ -211,7 +230,7 @@ public final class Utils {
         return imagesToProcess;
     }
 
-    public static ArrayList<String> getImagesToProcess(Context context, ArrayList<String> photos)
+    public static ArrayList<String> getImagesToProcess(Context context, List<String> photos)
     {
         ArrayList<String> imagesToProcess = new ArrayList<>();
 
@@ -580,5 +599,64 @@ public final class Utils {
         }
 
         return df.format(date);
+    }
+
+    public static double getPhotosWithoutDate2(Context context, List<String> photos, SQLiteDatabase db)
+    {
+        LinkedList<String> photosWithoutDate = new LinkedList<>(photos);
+        long startTimeMillis = System.currentTimeMillis();
+
+        //Comprobamos si el nombre de la imagen está en la base de datos
+        if(db == null || !db.isOpen())
+            db = new DatabaseHelper(context).getReadableDatabase();
+
+        String searchQuery = "SELECT " + DatabaseHelper.PATH_COLUMN + " FROM " + DatabaseHelper.TABLE_NAME;
+
+        Cursor cursor = db.rawQuery(searchQuery, null);
+        if(cursor.moveToFirst()) {
+            do {
+                photosWithoutDate.remove(cursor.getString(0));
+            }while(cursor.moveToNext());
+        }
+        cursor.close();
+
+        LinkedList<String> result = new LinkedList<>(photosWithoutDate);
+
+        for(int i=0; i < photosWithoutDate.size(); i++) {
+            String image = photosWithoutDate.get(i);
+            File imgFile = new File(image);
+            if(!(imgFile.getName().toLowerCase().endsWith(".jpg") || imgFile.getName().toLowerCase().endsWith(".jpeg") ||
+                    imgFile.getName().toLowerCase().endsWith(".png")) || imgFile.getName().startsWith("dtp-"))
+                result.remove(image);
+            else {
+                File imgFileWithDate = new File(imgFile.getParentFile().getAbsolutePath() + "/dtp-" + imgFile.getName());
+
+                if (imgFileWithDate.exists())
+                    result.remove(image);
+            }
+        }
+
+        long endTimeMillis = System.currentTimeMillis() - startTimeMillis;
+
+        return endTimeMillis / 1000d;
+    }
+
+    private static void saveListStringToSharedPreferences(Context context, List<String> list) {
+        /*SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        Gson gson = new Gson();
+        String json = gson.toJson(list);
+        editor.putString(TAG, json);
+        editor.commit();*/
+    }
+
+    private static void readListStringFromSharedPreferences(Context context, List<String> list) {
+        /*
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        Gson gson = new Gson();
+        String json = sharedPreferences.getString(TAG, null);
+        Type type = new TypeToken<ArrayList<ArrayObject>>() {}.getType();
+        ArrayList<ArrayObject> arrayList = gson.from(json, type);
+         */
     }
  }

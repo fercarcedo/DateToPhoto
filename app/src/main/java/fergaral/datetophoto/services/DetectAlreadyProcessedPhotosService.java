@@ -13,6 +13,7 @@ import android.support.v4.app.NotificationCompat;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.PhotosActivity;
@@ -48,7 +49,7 @@ public class DetectAlreadyProcessedPhotosService extends IntentService {
 
         SQLiteDatabase photosDb = new DatabaseHelper(this).getWritableDatabase();
 
-        ArrayList<String> imagesToProcess = Utils.getPhotosWithoutDate(this,
+        List<String> imagesToProcess = Utils.getPhotosWithoutDate(this,
                 Utils.getImagesToProcess(this, new PhotoUtils(this).getCameraImages()), photosDb);
 
         for(String path : imagesToProcess) {

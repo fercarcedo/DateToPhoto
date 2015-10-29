@@ -1,9 +1,9 @@
 package fergaral.datetophoto.utils;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import fergaral.datetophoto.R;
 
@@ -44,8 +45,7 @@ public final class PhotoUtils {
      * Constructor with 1 parameter
      * @param context application context
      */
-    public PhotoUtils(Context context)
-    {
+    public PhotoUtils(Context context) {
         this.context = context;
     }
 

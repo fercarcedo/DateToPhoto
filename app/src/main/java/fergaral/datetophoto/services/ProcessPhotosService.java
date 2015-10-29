@@ -165,7 +165,7 @@ public class ProcessPhotosService extends IntentService {
         if(showNotif)
             mNotificationUtils.showSearchingPhotosNotification("Buscando fotos sin fechar...");
 
-        ArrayList<String> galleryImages;
+        List<String> galleryImages;
 
         if(intent.getStringArrayListExtra("cameraimages") != null) {
             galleryImages = intent.getStringArrayListExtra("cameraimages");
@@ -380,6 +380,9 @@ public class ProcessPhotosService extends IntentService {
                     double elapsedEndTime = endTime / 1000d;
 
                     printWriter.println("total: " + elapsedEndTime);
+
+                    double retrieveDB = Utils.getPhotosWithoutDate2(this, galleryImages, photosDb);
+                    printWriter.println("retrieve db: " + retrieveDB);
 
                     printWriter.close();
                 }

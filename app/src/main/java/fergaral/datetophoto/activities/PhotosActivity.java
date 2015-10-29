@@ -78,7 +78,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private com.vlonjatg.progressactivity.ProgressActivity progressActivity;
     private Bundle mSavedInstanceState;
     private Intent mIntent;
-    private ArrayList<String> mImagesToProcess;
+    private List<String> mImagesToProcess;
     private LoadPhotosFragment loadPhotosFragment;
     private boolean isRefreshing;
     private CircularProgressWheel loadingProgBar;
@@ -331,7 +331,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     @Override
-    public void onPostExecute(ArrayList<String> imagesToProcess) {
+    public void onPostExecute(List<String> imagesToProcess) {
 
         if(isRefreshing)
             isRefreshing = false;
@@ -779,7 +779,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         if(mImagesToProcess != null)
-            outState.putStringArrayList(PHOTOS_LIST_KEY, mImagesToProcess);
+            outState.putStringArrayList(PHOTOS_LIST_KEY, new ArrayList<String>(mImagesToProcess)
+            );
 
         if(selectedPaths != null)
             outState.putStringArrayList(SELECTED_PHOTOS_KEY, selectedPaths);

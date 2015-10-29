@@ -4,8 +4,10 @@ import android.app.Activity;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v4.app.Fragment;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +28,7 @@ public class LoadPhotosFragment extends Fragment {
 
     public interface TaskCallbacks {
         void onPreExecute();
-        void onPostExecute(ArrayList<String> result);
+        void onPostExecute(List<String> result);
     }
 
     @Override
@@ -57,7 +59,7 @@ public class LoadPhotosFragment extends Fragment {
         mCallback = null;
     }
 
-    public class ImagesToProcessTask extends AsyncTask<Void, Void, ArrayList<String>> {
+    public class ImagesToProcessTask extends AsyncTask<Void, Void, List<String>> {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -67,7 +69,7 @@ public class LoadPhotosFragment extends Fragment {
         }
 
         @Override
-        protected ArrayList<String> doInBackground(Void... voids) {
+        protected List<String> doInBackground(Void... voids) {
             if(getActivity() == null)
                 return new ArrayList<>();
 
@@ -77,7 +79,9 @@ public class LoadPhotosFragment extends Fragment {
 
             //Obtenemos las fotos sin fechar de entre las que hay que procesar, ya que es más rápido identificar las que hay
             //que procesar, que no las que están sin fechars
-            ArrayList<String> imagesToProcess;
+            List<String> imagesToProcess;
+
+            long startTime = System.currentTimeMillis();
 
             if(selectedFolder == null) {
                 imagesToProcess = Utils.getPhotosWithoutDate(getActivity(),
@@ -87,13 +91,17 @@ public class LoadPhotosFragment extends Fragment {
                         Utils.getImagesToProcess(getActivity(), cameraImages, selectedFolder), photosDb);
             }
 
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            Utils.write(Environment.getExternalStorageDirectory().getPath() + File.separator + "Download" + File.separator + "dtpload.txt",
+                    String.valueOf(elapsedTime));
+
             photosDb.close();
 
             return imagesToProcess;
         }
 
         @Override
-        protected void onPostExecute(ArrayList<String> imagesToProcess) {
+        protected void onPostExecute(List<String> imagesToProcess) {
             super.onPostExecute(imagesToProcess);
 
             if(mCallback != null)
