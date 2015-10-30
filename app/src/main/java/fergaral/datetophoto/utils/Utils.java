@@ -17,6 +17,7 @@ import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
@@ -182,15 +183,24 @@ public final class Utils {
         return photosWithoutDate;
     }
 
-    public static List<String> getPhotosWithoutDate(Context context, ArrayList<String> photos, SQLiteDatabase db)
+    public static List<String> getPhotosWithoutDate(Context context, List<String> photos, SQLiteDatabase db)
     {
+        long firstTime = System.currentTimeMillis();
+        String s = "";
+        long startTime = System.currentTimeMillis();
+
         LinkedList<String> photosWithoutDate = new LinkedList<>(photos);
+
+        long elapedTime = System.currentTimeMillis() - startTime;
+        s += "Creating LinkedList: " + elapedTime + "\n";
 
         //Comprobamos si el nombre de la imagen está en la base de datos
         if(db == null || !db.isOpen())
             db = new DatabaseHelper(context).getReadableDatabase();
 
         String searchQuery = "SELECT " + DatabaseHelper.PATH_COLUMN + " FROM " + DatabaseHelper.TABLE_NAME;
+
+        startTime = System.currentTimeMillis();
 
         Cursor cursor = db.rawQuery(searchQuery, null);
         if(cursor.moveToFirst()) {
@@ -200,7 +210,17 @@ public final class Utils {
         }
         cursor.close();
 
+        elapedTime = System.currentTimeMillis() - startTime;
+        s += "Iterating database: " + elapedTime + "\n";
+
+        startTime = System.currentTimeMillis();
+
         LinkedList<String> result = new LinkedList<>(photosWithoutDate);
+
+        elapedTime = System.currentTimeMillis() - startTime;
+        s += "Creating result: " + elapedTime + "\n";
+
+        startTime = System.currentTimeMillis();
 
         for(int i=0; i < photosWithoutDate.size(); i++) {
             String image = photosWithoutDate.get(i);
@@ -216,11 +236,19 @@ public final class Utils {
             }
         }
 
+        elapedTime = System.currentTimeMillis() - startTime;
+        s += "Final for loop O(n): " + elapedTime + "\n";
+        long elapedTimeTotal = System.currentTimeMillis() - firstTime;
+        s += "TOTAL: " + elapedTimeTotal;
+
+        Utils.write(Environment.getExternalStorageDirectory().getPath() + File.separator + "Download"
+                                                + File.separator + "dtptimephotowithoutdate.txt", s);
+
         return result;
     }
 
-    public static ArrayList<String> getImagesToProcess(Context context, List<String> photos, String folderName) {
-        ArrayList<String> imagesToProcess = new ArrayList<>();
+    public static List<String> getImagesToProcess(Context context, List<String> photos, String folderName) {
+        List<String> imagesToProcess = new LinkedList<>();
 
         for(String path : photos) {
             if(PhotoUtils.getParentFolderName(path).equals(folderName))
@@ -230,12 +258,19 @@ public final class Utils {
         return imagesToProcess;
     }
 
-    public static ArrayList<String> getImagesToProcess(Context context, List<String> photos)
+    public static List<String> getImagesToProcess(Context context, List<String> photos)
     {
-        ArrayList<String> imagesToProcess = new ArrayList<>();
+        List<String> imagesToProcess = new LinkedList<>();
+        String[] foldersToProcess = getFoldersToProcess(context);
+        ArrayList<String> allFolders = PhotoUtils.getFolders(context);
+        HashMap<String, Boolean> foldersMap = new HashMap<>();
+
+        for(String folderName : allFolders) {
+            foldersMap.put(folderName, contains(foldersToProcess, folderName));
+        }
 
         for(String path : photos) {
-            if(Utils.processSelectedFolder(context, PhotoUtils.getParentFolderName(path)))
+            if(foldersMap.get(PhotoUtils.getParentFolderName(path)))
                 imagesToProcess.add(path);
         }
 
@@ -658,5 +693,14 @@ public final class Utils {
         Type type = new TypeToken<ArrayList<ArrayObject>>() {}.getType();
         ArrayList<ArrayObject> arrayList = gson.from(json, type);
          */
+    }
+
+    private static boolean contains(String[] array, String value) {
+        for(String element : array) {
+            if(element.equals(value))
+                return true;
+        }
+
+        return false;
     }
  }

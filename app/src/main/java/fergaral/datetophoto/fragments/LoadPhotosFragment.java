@@ -74,26 +74,58 @@ public class LoadPhotosFragment extends Fragment {
                 return new ArrayList<>();
 
             SQLiteDatabase photosDb = new DatabaseHelper(getActivity()).getReadableDatabase();
-
-            ArrayList<String> cameraImages = new PhotoUtils(getActivity()).getCameraImages();
-
+            List<String> cameraImages = new PhotoUtils(getActivity()).getCameraImages();
             //Obtenemos las fotos sin fechar de entre las que hay que procesar, ya que es más rápido identificar las que hay
             //que procesar, que no las que están sin fechars
             List<String> imagesToProcess;
 
             long startTime = System.currentTimeMillis();
+            String s = "";
 
             if(selectedFolder == null) {
+                long startTimeImagProcess = System.currentTimeMillis();
+
+                imagesToProcess = Utils.getImagesToProcess(getActivity(), cameraImages);
+
+                long elapsedImagProcess = System.currentTimeMillis() - startTimeImagProcess;
+
+                s += "getImagesToProcess: " + elapsedImagProcess + "\n";
+
+                long startTimeWithoutDate = System.currentTimeMillis();
+
                 imagesToProcess = Utils.getPhotosWithoutDate(getActivity(),
-                        Utils.getImagesToProcess(getActivity(), cameraImages), photosDb);
+                                                    imagesToProcess,
+                                                    photosDb);
+
+                long elapedTimeWithoutDate = System.currentTimeMillis() - startTimeWithoutDate;
+
+                s += "getPhotosWithoutDate: " + elapedTimeWithoutDate + "\n";
             }else{
+                long startTimeImagProcess = System.currentTimeMillis();
+
+                imagesToProcess = Utils.getImagesToProcess(getActivity(), cameraImages, selectedFolder);
+
+                long elapsedImagProcess = System.currentTimeMillis() - startTimeImagProcess;
+
+                s += "getImagesToProcess: " + elapsedImagProcess + "\n";
+
+                long startTimeWithoutDate = System.currentTimeMillis();
+
                 imagesToProcess = Utils.getPhotosWithoutDate(getActivity(),
-                        Utils.getImagesToProcess(getActivity(), cameraImages, selectedFolder), photosDb);
+                                                                imagesToProcess,
+                                                                photosDb);
+
+                long elapedTimeWithoutDate = System.currentTimeMillis() - startTimeWithoutDate;
+
+                s += "getPhotosWithoutDate: " + elapedTimeWithoutDate + "\n";
             }
 
             long elapsedTime = System.currentTimeMillis() - startTime;
+
+            s += "TOTAL: " + elapsedTime + "\n";
+
             Utils.write(Environment.getExternalStorageDirectory().getPath() + File.separator + "Download" + File.separator + "dtpload.txt",
-                    String.valueOf(elapsedTime));
+                    s);
 
             photosDb.close();
 
