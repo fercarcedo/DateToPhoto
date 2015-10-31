@@ -189,10 +189,20 @@ public final class Utils {
         String s = "";
         long startTime = System.currentTimeMillis();
 
-        LinkedList<String> photosWithoutDate = new LinkedList<>(photos);
+        HashMap<String, Boolean> photosMap = new HashMap<>();
+        int numPhotos = 0;
 
-        long elapedTime = System.currentTimeMillis() - startTime;
-        s += "Creating LinkedList: " + elapedTime + "\n";
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        s += "Creating ArrayList: " + elapsedTime + "\n";
+
+        startTime = System.currentTimeMillis();
+
+        for(String photo : photos) {
+            photosMap.put(photo, false); //false significa que la foto no está fechada
+        }
+
+        elapsedTime = System.currentTimeMillis() - startTime;
+        s += "Filling HashMap: " + elapsedTime + "\n";
 
         //Comprobamos si el nombre de la imagen está en la base de datos
         if(db == null || !db.isOpen())
@@ -205,53 +215,77 @@ public final class Utils {
         Cursor cursor = db.rawQuery(searchQuery, null);
         if(cursor.moveToFirst()) {
             do {
-                photosWithoutDate.remove(cursor.getString(0));
+                String imageName = cursor.getString(0);
+
+                if(photosMap.containsKey(imageName)) {
+                    photosMap.put(imageName, true);
+                    numPhotos++;
+                }
             }while(cursor.moveToNext());
         }
         cursor.close();
 
-        elapedTime = System.currentTimeMillis() - startTime;
-        s += "Iterating database: " + elapedTime + "\n";
+        elapsedTime = System.currentTimeMillis() - startTime;
+        s += "Iterating database: " + elapsedTime + "\n";
 
         startTime = System.currentTimeMillis();
 
-        LinkedList<String> result = new LinkedList<>(photosWithoutDate);
-
-        elapedTime = System.currentTimeMillis() - startTime;
-        s += "Creating result: " + elapedTime + "\n";
-
-        startTime = System.currentTimeMillis();
-
-        for(int i=0; i < photosWithoutDate.size(); i++) {
-            String image = photosWithoutDate.get(i);
-            File imgFile = new File(image);
-            if(!(imgFile.getName().toLowerCase().endsWith(".jpg") || imgFile.getName().toLowerCase().endsWith(".jpeg") ||
-                    imgFile.getName().toLowerCase().endsWith(".png")) || imgFile.getName().startsWith("dtp-"))
-                result.remove(image);
-            else {
-                File imgFileWithDate = new File(imgFile.getParentFile().getAbsolutePath() + "/dtp-" + imgFile.getName());
-
-                if (imgFileWithDate.exists())
-                    result.remove(image);
+        for(String image : photos) {
+            if(PhotoUtils.incorrectFormat(image)) {
+                photosMap.put(image, true);
+                numPhotos++;
+            }else {
+                if(PhotoUtils.getName(image).startsWith("dtp-")) {
+                    photosMap.put(image, true);
+                    numPhotos++;
+                }else if(photosMap.containsKey(PhotoUtils.getFileWithDate(image))) {
+                    photosMap.put(image, true);
+                    numPhotos++;
+                }
             }
         }
 
-        elapedTime = System.currentTimeMillis() - startTime;
-        s += "Final for loop O(n): " + elapedTime + "\n";
-        long elapedTimeTotal = System.currentTimeMillis() - firstTime;
-        s += "TOTAL: " + elapedTimeTotal;
+        elapsedTime = System.currentTimeMillis() - startTime;
+        s += "Final for loop O(n): " + elapsedTime + "\n";
+
+        startTime = System.currentTimeMillis();
+
+        ArrayList<String> photosWithoutDate = new ArrayList<>(numPhotos);
+
+        for(String photo : photos) {
+            if(photosMap.containsKey(photo) && !photosMap.get(photo)) {
+                photosWithoutDate.add(photo);
+                Log.d("TAGP", photo);
+            }
+        }
+
+        elapsedTime = System.currentTimeMillis() - startTime;
+        s += "Adding items to ArrayList: " + elapsedTime + "\n";
+
+        long elapsedTimeTotal = System.currentTimeMillis() - firstTime;
+        s += "TOTAL: " + elapsedTimeTotal;
 
         Utils.write(Environment.getExternalStorageDirectory().getPath() + File.separator + "Download"
                                                 + File.separator + "dtptimephotowithoutdate.txt", s);
 
-        return result;
+        return photosWithoutDate;
     }
 
     public static List<String> getImagesToProcess(Context context, List<String> photos, String folderName) {
-        List<String> imagesToProcess = new LinkedList<>();
+        HashMap<String, Boolean> photosMap = new HashMap<>();
+        int numPhotos = 0;
 
         for(String path : photos) {
-            if(PhotoUtils.getParentFolderName(path).equals(folderName))
+            if(PhotoUtils.getParentFolderName(path).equals(folderName)) {
+                photosMap.put(path, true);
+                numPhotos++;
+            }
+        }
+
+        ArrayList<String> imagesToProcess = new ArrayList<>(numPhotos);
+
+        for(String path : photos) {
+            if(photosMap.containsKey(path) && photosMap.get(path))
                 imagesToProcess.add(path);
         }
 
@@ -260,17 +294,24 @@ public final class Utils {
 
     public static List<String> getImagesToProcess(Context context, List<String> photos)
     {
-        List<String> imagesToProcess = new LinkedList<>();
         String[] foldersToProcess = getFoldersToProcess(context);
         ArrayList<String> allFolders = PhotoUtils.getFolders(context);
         HashMap<String, Boolean> foldersMap = new HashMap<>();
+        int numFolders = 0;
 
         for(String folderName : allFolders) {
-            foldersMap.put(folderName, contains(foldersToProcess, folderName));
+            boolean process = contains(foldersToProcess, folderName);
+            foldersMap.put(folderName, process);
+
+            if(process)
+                numFolders++;
         }
 
+        ArrayList<String> imagesToProcess = new ArrayList<>(numFolders);
+
         for(String path : photos) {
-            if(foldersMap.get(PhotoUtils.getParentFolderName(path)))
+            String folderName = PhotoUtils.getParentFolderName(path);
+            if(foldersMap.containsKey(folderName) && foldersMap.get(folderName))
                 imagesToProcess.add(path);
         }
 

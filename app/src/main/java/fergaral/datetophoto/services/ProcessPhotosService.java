@@ -360,6 +360,9 @@ public class ProcessPhotosService extends IntentService {
                     } else {
                         savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtp-" + imgFile.getName(), imgFile, true
                         );
+
+                        registerPhotoIntoDb(imgFile.getAbsolutePath());
+                        registerPhotoIntoDb(imgFile.getParentFile().getAbsolutePath() + File.separator + "dtp-" + imgFile.getName());
                     }
 
                     long endTimeSavePhoto = System.currentTimeMillis() - startTimeSavePhoto;

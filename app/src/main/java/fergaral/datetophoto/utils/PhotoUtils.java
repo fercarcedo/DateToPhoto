@@ -452,6 +452,12 @@ public final class PhotoUtils {
         return pathSegments[pathSegments.length - 2];
     }
 
+    public static String getFileWithDate(String fileWithoutDate) {
+        String[] pathSegments = fileWithoutDate.split("/");
+        String name = pathSegments[pathSegments.length - 1];
+
+        return fileWithoutDate.substring(0, fileWithoutDate.length() - name.length()) + "dtp-" + name;
+    }
 
     public static void deletePhoto(Context context, String s)
     {
@@ -485,5 +491,16 @@ public final class PhotoUtils {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putBoolean("firstuse", false);
         editor.apply();
+    }
+
+    public static boolean incorrectFormat(String image) {
+        return !(image.endsWith(".jpg") || image.endsWith(".JPG") || image.endsWith(".jpeg") ||
+                image.endsWith(".JPEG") || image.endsWith(".png")  || image.endsWith(".PNG"));
+    }
+
+    public static String getName(String image) {
+        String[] pathSegments = image.split("/");
+
+        return pathSegments[pathSegments.length - 1];
     }
 }

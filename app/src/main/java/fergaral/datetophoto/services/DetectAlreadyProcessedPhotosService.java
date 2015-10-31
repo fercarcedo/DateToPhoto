@@ -67,6 +67,8 @@ public class DetectAlreadyProcessedPhotosService extends IntentService {
                         ContentValues values = new ContentValues();
                         values.put(DatabaseHelper.PATH_COLUMN, path);
                         photosDb.insert(DatabaseHelper.TABLE_NAME, null, values);
+                    }else{
+                        //Miramos a ver si empieza por dtp-
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
