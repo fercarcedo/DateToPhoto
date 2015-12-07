@@ -28,7 +28,7 @@ public class LoadPhotosFragment extends Fragment {
 
     public interface TaskCallbacks {
         void onPreExecute();
-        void onPostExecute(List<String> result);
+        void onPostExecute(ArrayList<String> result);
     }
 
     @Override
@@ -59,7 +59,7 @@ public class LoadPhotosFragment extends Fragment {
         mCallback = null;
     }
 
-    public class ImagesToProcessTask extends AsyncTask<Void, Void, List<String>> {
+    public class ImagesToProcessTask extends AsyncTask<Void, Void, ArrayList<String>> {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -69,15 +69,15 @@ public class LoadPhotosFragment extends Fragment {
         }
 
         @Override
-        protected List<String> doInBackground(Void... voids) {
+        protected ArrayList<String> doInBackground(Void... voids) {
             if(getActivity() == null)
                 return new ArrayList<>();
 
             SQLiteDatabase photosDb = new DatabaseHelper(getActivity()).getReadableDatabase();
-            List<String> cameraImages = new PhotoUtils(getActivity()).getCameraImages();
+            ArrayList<String> cameraImages = new PhotoUtils(getActivity()).getCameraImages();
             //Obtenemos las fotos sin fechar de entre las que hay que procesar, ya que es más rápido identificar las que hay
             //que procesar, que no las que están sin fechars
-            List<String> imagesToProcess;
+            ArrayList<String> imagesToProcess;
 
             long startTime = System.currentTimeMillis();
             String s = "";
@@ -133,7 +133,7 @@ public class LoadPhotosFragment extends Fragment {
         }
 
         @Override
-        protected void onPostExecute(List<String> imagesToProcess) {
+        protected void onPostExecute(ArrayList<String> imagesToProcess) {
             super.onPostExecute(imagesToProcess);
 
             if(mCallback != null)

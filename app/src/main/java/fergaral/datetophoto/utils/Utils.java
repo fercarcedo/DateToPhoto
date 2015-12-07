@@ -183,7 +183,7 @@ public final class Utils {
         return photosWithoutDate;
     }
 
-    public static List<String> getPhotosWithoutDate(Context context, List<String> photos, SQLiteDatabase db)
+    public static ArrayList<String> getPhotosWithoutDate(Context context, ArrayList<String> photos, SQLiteDatabase db)
     {
         long firstTime = System.currentTimeMillis();
         String s = "";
@@ -271,7 +271,7 @@ public final class Utils {
         return photosWithoutDate;
     }
 
-    public static List<String> getImagesToProcess(Context context, List<String> photos, String folderName) {
+    public static ArrayList<String> getImagesToProcess(Context context, ArrayList<String> photos, String folderName) {
         HashMap<String, Boolean> photosMap = new HashMap<>();
         int numPhotos = 0;
 
@@ -292,7 +292,7 @@ public final class Utils {
         return imagesToProcess;
     }
 
-    public static List<String> getImagesToProcess(Context context, List<String> photos)
+    public static ArrayList<String> getImagesToProcess(Context context, List<String> photos)
     {
         String[] foldersToProcess = getFoldersToProcess(context);
         ArrayList<String> allFolders = PhotoUtils.getFolders(context);

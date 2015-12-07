@@ -92,6 +92,6 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
         getFragmentManager()
                 .beginTransaction()
                 .remove(this)
-                .commit();
+                .commitAllowingStateLoss();
     }
 }

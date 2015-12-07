@@ -61,13 +61,13 @@ public final class PhotoUtils {
                 projection,
                 null,
                 null,
-                null);
+                MediaStore.MediaColumns.DATE_ADDED + " DESC");
 
         final Cursor cursorInternal = context.getContentResolver().query(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
                 projection,
                 null,
                 null,
-                null);
+                MediaStore.MediaColumns.DATE_ADDED + " DESC");
 
         ArrayList<String> result;
 

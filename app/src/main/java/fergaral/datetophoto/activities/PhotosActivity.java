@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -52,14 +53,12 @@ import fergaral.datetophoto.utils.Utils;
 /**
  * Created by fer on 18/07/15.
  */
-public class PhotosActivity extends AppCompatActivity implements ProgressChangedListener,
-                                                                    LoadPhotosFragment.TaskCallbacks {
+public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragment.TaskCallbacks {
 
     private static final String SEARCH_PHOTOS_FIRST_USE_KEY = "searchPhotosFirstUse";
     public static final String ACTION_SHARE_KEY = "actionshare";
     private static final String LAST_SELECTED_SPINNER_POSITION_KEY = "lastSelectedSpinnerPos";
     private static final String IS_REFRESHING_KEY = "isRefreshing";
-    private static final String PROGRESSBAR_SHOWING_KEY = "progressBarShowing";
     private static final String LOAD_PHOTOS_FRAGMENT_TAG = "loadPhotosFragment";
     private static final String PHOTOS_LIST_KEY = "photosList";
     private static final String SELECTED_PHOTOS_KEY = "selectedPhotos";
@@ -78,7 +77,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     private com.vlonjatg.progressactivity.ProgressActivity progressActivity;
     private Bundle mSavedInstanceState;
     private Intent mIntent;
-    private List<String> mImagesToProcess;
+    private ArrayList<String> mImagesToProcess;
     private LoadPhotosFragment loadPhotosFragment;
     private boolean isRefreshing;
     private CircularProgressWheel loadingProgBar;
@@ -98,13 +97,15 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         foldersSpinner = (AppCompatSpinner) findViewById(R.id.foldersSpinner);
 
+        PhotoUtils.selectAllFoldersOnFirstUse(this);
+
         final List<String> folders = new ArrayList<String>(Arrays.asList(Utils.getFoldersToProcess(this)));
         folders.add(0, "Todas las fotos");
         foldersSpinner.setAdapter(new ArrayAdapter<String>(this, R.layout.spinner_row, folders));
         foldersSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if(lastSelectedSpinnerPosition != position) {
+                if (lastSelectedSpinnerPosition != position) {
                     refreshGrid();
                     lastSelectedSpinnerPosition = position;
                 }
@@ -115,8 +116,6 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
             }
         });
-
-        PhotoUtils.selectAllFoldersOnFirstUse(this);
 
         progressActivity = (com.vlonjatg.progressactivity.ProgressActivity) findViewById(R.id.prog_activ);
         loadingProgBar = (CircularProgressWheel) findViewById(R.id.loading_photos_prog_bar);
@@ -192,10 +191,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         mIntent = intent;
         mSavedInstanceState = savedInstanceState;
 
-        if(savedInstanceState != null && savedInstanceState.containsKey(IS_REFRESHING_KEY))
+        if(savedInstanceState != null)
             isRefreshing = savedInstanceState.getBoolean(IS_REFRESHING_KEY, true);
-        else
-            isRefreshing = true;
 
         if(searchPhotos) {
             //Mostramos un diálogo preguntando si usaron Date To Photo previamente, pero solo si es la primera vez que
@@ -243,14 +240,8 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                             .commit();
                 }else{
                     //El Fragment ya se creó (pudo ser debido a un cambio de rotación)
-                    if(savedInstanceState != null && savedInstanceState.containsKey(PROGRESSBAR_SHOWING_KEY)) {
-                        boolean wasProgressBarShowing = savedInstanceState.getBoolean(PROGRESSBAR_SHOWING_KEY);
-
-                        if(wasProgressBarShowing) {
-                            showLoading();
-                        }
-
-                    }
+                    if(isRefreshing)
+                        showLoading();
                 }
             }
 
@@ -282,47 +273,6 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     @Override
-    public void reportTotal(final int total) {
-        showProgress(total, "Fechando fotos...");
-
-        selectedPaths = new ArrayList<>();
-    }
-
-    @Override
-    public void onProgressChanged(final int progress) {
-        //progressCircle.setActual(this, progress);
-    }
-
-    @Override
-    public void reportEnd(final boolean fromActionShare) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (fromActionShare) {
-                    //Las fotos fueron compartidas desde una aplicación, mostramos el diálogo que advierte al usuario de que las
-                    //fotos ya fechadas están en la carpeta DateToPhoto
-                    new ShareEndDialogFragment().show(getSupportFragmentManager(), ShareEndDialogFragment.class.getSimpleName());
-                }
-            }
-        });
-
-        hideProgress();
-
-        PhotosAdapter adapter = (PhotosAdapter) photosGrid.getAdapter();
-
-        if(adapter != null) {
-            if (adapter.isEmpty() && !hideNoPhotosTextView) {
-                showNoPhotosScreen();
-            } else if (!adapter.isEmpty()) {
-                processPhotosBtn.show();
-            }
-        }
-
-        if(fromActionShare)
-            refreshGrid();
-    }
-
-    @Override
     public void onPreExecute() {
         showLoading();
         photosGrid.setVisibility(View.INVISIBLE);
@@ -331,11 +281,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     @Override
-    public void onPostExecute(List<String> imagesToProcess) {
-
-        if(isRefreshing)
-            isRefreshing = false;
-
+    public void onPostExecute(ArrayList<String> imagesToProcess) {
         mImagesToProcess = imagesToProcess;
 
         if(!PhotosActivity.IS_PROCESSING) {
@@ -422,7 +368,6 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                     .centerCrop()
                     .into(thumbV);
 
-            Log.d("TAG", images.get(position));
             return row;
         }
 
@@ -597,6 +542,15 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         if(!PhotosActivity.IS_PROCESSING && PhotosActivity.SHOULD_REFRESH_GRID) {
             refreshGrid();
+
+            String selectedFolder = (String) foldersSpinner.getSelectedItem();
+            final List<String> folders = new ArrayList<String>(Arrays.asList(Utils.getFoldersToProcess(this)));
+            folders.add(0, "Todas las fotos");
+            foldersSpinner.setAdapter(new ArrayAdapter<String>(this, R.layout.spinner_row, folders));
+
+            int selectedIndex = folders.indexOf(selectedFolder);
+
+            foldersSpinner.setSelection((selectedIndex != -1) ? selectedIndex : 0);
         }
     }
 
@@ -724,14 +678,12 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 loadPhotosFragment.refresh();
             else
                 loadPhotosFragment.load(selectedFolder);
-            isRefreshing = true;
         }else {
             createLoadPhotosFragment();
             if(selectedFolderPosition == 0)
                 loadPhotosFragment.refresh();
             else
                 loadPhotosFragment.load(selectedFolder);
-            isRefreshing = true;
         }
 
         PhotosActivity.SHOULD_REFRESH_GRID = false;
@@ -745,6 +697,16 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
                 handleSingleImage(intent);
             else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction()))
                 handleMultipleImages(intent);
+        }
+    }
+
+    private void checkProgressFragment() {
+        Fragment fragment = getSupportFragmentManager().findFragmentByTag("progress_dialog");
+
+        if(fragment != null) {
+            DialogFragment df = (DialogFragment) fragment;
+            df.dismiss();
+            getSupportFragmentManager().beginTransaction().remove(fragment);
         }
     }
 
@@ -779,7 +741,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         if(mImagesToProcess != null)
-            outState.putStringArrayList(PHOTOS_LIST_KEY, new ArrayList<String>(mImagesToProcess)
+            outState.putStringArrayList(PHOTOS_LIST_KEY, mImagesToProcess
             );
 
         if(selectedPaths != null)
@@ -787,9 +749,7 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         outState.putBoolean(FAB_PRESSED_KEY, wasFABPressed);
 
-        outState.putBoolean(PROGRESSBAR_SHOWING_KEY, loadingProgBar.getVisibility() == View.VISIBLE);
-
-        outState.putBoolean(IS_REFRESHING_KEY, isRefreshing);
+        outState.putBoolean(IS_REFRESHING_KEY, loadingProgBar.getVisibility() == View.VISIBLE);
 
         outState.putInt(LAST_SELECTED_SPINNER_POSITION_KEY, lastSelectedSpinnerPosition);
         //Dejamos que se guarden los valores por defecto (texto introdcido en un EditText, etc)
@@ -816,17 +776,15 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
     }
 
     private void hideNoPhotosScreen() {
-        progressActivity.showContent();
+        if(progressActivity.isEmpty())
+            progressActivity.showContent();
     }
 
     private void showLoading() {
-        if(progressActivity.isEmpty()) {
+        if(progressActivity.isEmpty())
             progressActivity.showContent();
-            Log.d("TAG", "isEmpty");
-        }
 
         loadingProgBar.setVisibility(View.VISIBLE);
-        Log.d("TAG", "Loading");
     }
 
     private void showProgressDialog(boolean searchPhotos) {
@@ -893,8 +851,10 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
         {
             super.onActivityCreated(savedInstanceState);
 
-            FragmentManager fm = getFragmentManager();
+            FragmentManager fm  = getFragmentManager();
             mHeadless = (ProgressHeadlessFragment) fm.findFragmentByTag("headless");
+
+            Log.d("TAG", "mHeadless " + ((mHeadless != null) ? "!= null" : "null"));
 
             if(mHeadless == null){
                 mHeadless = new ProgressHeadlessFragment();
@@ -952,12 +912,23 @@ public class PhotosActivity extends AppCompatActivity implements ProgressChanged
 
         @Override
         public void reportEnd(boolean fromActionShare) {
-            dismiss();
-
+            dismissAllowingStateLoss();
             PhotosActivity photosActivity = (PhotosActivity) getActivity();
+            photosActivity.selectedPaths.clear();
+
             if(!searchPhotos) {
                 photosActivity.refreshGrid();
             }else{
+                FragmentManager fm = getFragmentManager();
+
+                Fragment fragment = fm.findFragmentByTag("headless");
+
+                if(fragment != null) {
+                    fm.beginTransaction()
+                            .remove(fragment)
+                            .commit();
+                }
+
                 photosActivity.createLoadPhotosFragment();
                 photosActivity.checkSharedPhotos(photosActivity.mSavedInstanceState, photosActivity.mIntent);
             }
