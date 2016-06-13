@@ -1,17 +1,27 @@
 package fergaral.datetophoto.activities;
 
+import android.Manifest;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.preference.PreferenceManager;
+import android.provider.ContactsContract;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatSpinner;
@@ -22,20 +32,31 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
+import com.andexert.library.RippleView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.GlideBitmapDrawable;
+import com.bumptech.glide.load.resource.drawable.GlideDrawable;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 import com.software.shell.fab.ActionButton;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import fergaral.datetophoto.R;
@@ -43,6 +64,7 @@ import fergaral.datetophoto.fragments.LoadPhotosFragment;
 import fergaral.datetophoto.fragments.ProgressHeadlessFragment;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.receivers.ActionCancelReceiver;
+import fergaral.datetophoto.receivers.PhotosObserver;
 import fergaral.datetophoto.utils.CircularProgressWheel;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.ProgressCircle;
@@ -53,7 +75,7 @@ import fergaral.datetophoto.utils.Utils;
 /**
  * Created by fer on 18/07/15.
  */
-public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragment.TaskCallbacks {
+public class PhotosActivity extends PermissionActivity implements LoadPhotosFragment.TaskCallbacks {
 
     private static final String SEARCH_PHOTOS_FIRST_USE_KEY = "searchPhotosFirstUse";
     public static final String ACTION_SHARE_KEY = "actionshare";
@@ -74,7 +96,6 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
     private View coverView;
     private CardView cardSpeedDial1, cardSpeedDial2;
     private boolean hideNoPhotosTextView;
-    private com.vlonjatg.progressactivity.ProgressActivity progressActivity;
     private Bundle mSavedInstanceState;
     private Intent mIntent;
     private ArrayList<String> mImagesToProcess;
@@ -96,12 +117,25 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
             lastSelectedSpinnerPosition = savedInstanceState.getInt(LAST_SELECTED_SPINNER_POSITION_KEY, 0);
 
         foldersSpinner = (AppCompatSpinner) findViewById(R.id.foldersSpinner);
+        //nophotosView = (NoPhotosView) findViewById(R.id.noPhotosView);
+
+        if(ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            return; //The permission screen will be displayed
 
         PhotoUtils.selectAllFoldersOnFirstUse(this);
 
-        final List<String> folders = new ArrayList<String>(Arrays.asList(Utils.getFoldersToProcess(this)));
+        final List<String> folders = new ArrayList<>(Arrays.asList(Utils.getFoldersToProcess(this)));
+
+        Collections.sort(folders, new Comparator<String>() {
+            @Override
+            public int compare(String lhs, String rhs) {
+                return lhs.toLowerCase().compareTo(rhs.toLowerCase());
+            }
+        });
+
         folders.add(0, "Todas las fotos");
-        foldersSpinner.setAdapter(new ArrayAdapter<String>(this, R.layout.spinner_row, folders));
+        foldersSpinner.setAdapter(new ArrayAdapter<>(this, R.layout.spinner_row, folders));
         foldersSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -117,7 +151,6 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
             }
         });
 
-        progressActivity = (com.vlonjatg.progressactivity.ProgressActivity) findViewById(R.id.prog_activ);
         loadingProgBar = (CircularProgressWheel) findViewById(R.id.loading_photos_prog_bar);
         processPhotosBtn = (ActionButton) findViewById(R.id.btnProcessSelectedPhotos);
         fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
@@ -222,14 +255,14 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
                     }
 
                     photosGrid.setAdapter(new PhotosAdapter(mImagesToProcess));
-                    processPhotosBtn.show();
+                    //processPhotosBtn.show();
                 }else{
                     showNoPhotosScreen();
                 }
             }else {
                 //Iniciamos la AsyncTask (en el Headless Fragment)
                 loadPhotosFragment = (LoadPhotosFragment) getSupportFragmentManager()
-                                                                .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG);
+                        .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG);
 
                 if(loadPhotosFragment == null) {
                     //Todavía no hemos creado el Fragment. Lo creamos e iniciamos la AsyncTask
@@ -289,7 +322,7 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
             photosGrid.setAdapter(new PhotosAdapter(imagesToProcess));
         }
 
-        progressActivity.showContent();
+        //progressActivity.showContent();
 
         if(hideNoPhotosTextView)
             hideNoPhotosTextView = false;
@@ -300,7 +333,7 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
             if (imagesToProcess.size() == 0) {
                 showNoPhotosScreen();
             } else if (imagesToProcess.size() != 0) {
-                processPhotosBtn.show();
+               // processPhotosBtn.show();
             }
         }
     }
@@ -312,7 +345,7 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
             this.images = images;
 
             if(images != null && images.size() != 0) {
-                    hideNoPhotosScreen();
+                hideNoPhotosScreen();
             }
         }
 
@@ -341,11 +374,6 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
             }
 
             TickedImageView thumbV = (TickedImageView) row.findViewById(R.id.thumb);
-            int screenWidth = getResources().getDisplayMetrics().widthPixels;
-            int numberOfColumns = Utils.landscape(PhotosActivity.this) ? 5 : 3;
-            int width = screenWidth / numberOfColumns;
-
-            thumbV.setDrawingWidth(width);
 
             //Por si la TickedImageView fue reciclada, la desmarcamos
             thumbV.setSelected(selectedPaths.contains(images.get(position)));
@@ -366,6 +394,21 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
             Glide.with(PhotosActivity.this)
                     .load(new File(images.get(position)))
                     .centerCrop()
+                    .listener(new RequestListener<File, GlideDrawable>() {
+                        @Override
+                        public boolean onException(Exception e, File model, Target<GlideDrawable> target, boolean isFirstResource) {
+                            removeImage(model.getPath());
+                            ((PhotosAdapter)photosGrid.getAdapter()).notifyDataSetChanged();
+                            return false;
+                        }
+
+                        @Override
+                        public boolean onResourceReady(GlideDrawable resource, File model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                            //At least one photo has been successfully loaded
+                            processPhotosBtn.show();
+                            return false;
+                        }
+                    })
                     .into(thumbV);
 
             return row;
@@ -373,6 +416,9 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
 
         public void removeImage(String image) {
             images.remove(image);
+
+            if(images.size() == 0)
+                showNoPhotosScreen();
         }
         public String getImage(int position) {
             return images.get(position);
@@ -500,33 +546,6 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
         if (adapter.isEmpty() && !hideNoPhotosTextView) {
             showNoPhotosScreen();
             processPhotosBtn.hide();
-        }
-    }
-
-    private void showProgress(int total, String title) {
-        PhotosActivity.IS_PROCESSING = true;
-
-        photosGrid.setVisibility(View.INVISIBLE);
-        progressActivity.showContent();
-
-        Utils.lockOrientation(this);
-
-        //Establecemos el total de fotos a fechar
-        //progressCircle.setTotal(total);
-        //progressCircle.setVisibility(View.VISIBLE);
-        //progressCircle.setTitle(title);
-    }
-
-    private void hideProgress() {
-        PhotosActivity.IS_PROCESSING = false;
-
-        Utils.unlockOrientation(this);
-        photosGrid.setVisibility(View.VISIBLE);
-        //progressCircle.setVisibility(View.INVISIBLE);
-
-        if(PhotosActivity.SHOULD_REFRESH_GRID) {
-            //Actualizamos la lista de fotos
-            refreshGrid();
         }
     }
 
@@ -667,10 +686,11 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
         if(wasFABPressed)
             clickBigFAB();
         else
-            super.onBackPressed();
+            finish(); //Since it's the first screen of the app, we simply leave it
     }
 
     private void refreshGrid() {
+        hideNoPhotosScreen();
         int selectedFolderPosition = foldersSpinner.getSelectedItemPosition();
         String selectedFolder = (String) foldersSpinner.getSelectedItem();
         if(loadPhotosFragment != null) {
@@ -749,7 +769,8 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
 
         outState.putBoolean(FAB_PRESSED_KEY, wasFABPressed);
 
-        outState.putBoolean(IS_REFRESHING_KEY, loadingProgBar.getVisibility() == View.VISIBLE);
+        if(loadingProgBar != null)
+            outState.putBoolean(IS_REFRESHING_KEY, loadingProgBar.getVisibility() == View.VISIBLE);
 
         outState.putInt(LAST_SELECTED_SPINNER_POSITION_KEY, lastSelectedSpinnerPosition);
         //Dejamos que se guarden los valores por defecto (texto introdcido en un EditText, etc)
@@ -772,19 +793,28 @@ public class PhotosActivity extends AppCompatActivity implements LoadPhotosFragm
     }
 
     private void showNoPhotosScreen() {
-        progressActivity.showEmpty(getResources().getDrawable(R.drawable.ic_done_white_48px), "No hay fotos sin fechar", "");
+        //nophotosView.setVisibility(View.VISIBLE);
+        photosGrid.setVisibility(View.GONE);
+
+        LinearLayout noPhotoslLayout = (LinearLayout) findViewById(R.id.noPhotosLlayout);
+
+        if(noPhotoslLayout != null)
+            noPhotoslLayout.setVisibility(View.VISIBLE);
     }
 
     private void hideNoPhotosScreen() {
-        if(progressActivity.isEmpty())
-            progressActivity.showContent();
+        //nophotosView.setVisibility(View.INVISIBLE);
+        photosGrid.setVisibility(View.VISIBLE);
+
+        LinearLayout noPhotoslLayout = (LinearLayout) findViewById(R.id.noPhotosLlayout);
+
+        if(noPhotoslLayout != null)
+            noPhotoslLayout.setVisibility(View.INVISIBLE);
     }
 
     private void showLoading() {
-        if(progressActivity.isEmpty())
-            progressActivity.showContent();
-
-        loadingProgBar.setVisibility(View.VISIBLE);
+        if(loadingProgBar != null)
+            loadingProgBar.setVisibility(View.VISIBLE);
     }
 
     private void showProgressDialog(boolean searchPhotos) {

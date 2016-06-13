@@ -14,10 +14,10 @@
         <android.support.v7.widget.Toolbar
             xmlns:android="http://schemas.android.com/apk/res/android"
             android:id="@+id/spinner_toolbar"
-            android:layout_height="?attr/actionBarSize"
             android:layout_width="match_parent"
-            android:background="?attr/colorPrimary"
+            android:layout_height="?attr/actionBarSize"
             android:layout_below="@id/tool_bar"
+            android:background="?attr/colorPrimary"
             android:elevation="4dp">
 
             <android.support.v7.widget.AppCompatSpinner
@@ -27,24 +27,42 @@
 
         </android.support.v7.widget.Toolbar>
 
-        <com.vlonjatg.progressactivity.ProgressActivity
-            android:id="@+id/prog_activ"
-            android:layout_width="match_parent"
+        <RelativeLayout android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_below="@id/spinner_toolbar"
-            app:progressEmptyStateBackgroundColor="@color/colorAccent"
-            app:progressLoadingStateBackgroundColor="?android:windowBackground">
-
+            android:layout_below="@id/spinner_toolbar">
 
             <fergaral.datetophoto.utils.CircularProgressWheel
                 android:id="@+id/loading_photos_prog_bar"
                 android:layout_width="75dp"
                 android:layout_height="75dp"
                 android:layout_centerInParent="true"
-                app:matProg_spinSpeed="0.5"
+                android:visibility="invisible"
                 app:matProg_barColor="@color/colorAccent"
                 app:matProg_progressIndeterminate="true"
-                android:visibility="invisible"/>
+                app:matProg_spinSpeed="0.5"/>
+
+            <LinearLayout android:id="@+id/noPhotosLlayout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:orientation="vertical"
+                android:visibility="visible">
+
+            <ImageView android:layout_width="@dimen/no_photos_image_size"
+                android:layout_height="@dimen/no_photos_image_size"
+                android:tint="@color/colorAccent"
+                android:layout_gravity="center_horizontal"
+                android:src="@drawable/ic_check_circle_black" />
+
+            <TextView android:id="@+id/tv_nophotos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No hay fotos sin fechar"
+                android:layout_gravity="center_horizontal"
+                android:textColor="@color/orange"
+                android:textSize="20sp" />
+
+            </LinearLayout>
 
             <GridView
                 android:id="@+id/photos_grid"
@@ -53,7 +71,8 @@
                 android:horizontalSpacing="2dp"
                 android:numColumns="@integer/photos_grid_num_columns"
                 android:stretchMode="columnWidth"
-                android:verticalSpacing="2dp" />
+                android:verticalSpacing="2dp"
+                android:visibility="invisible"/>
 
             <!--<com.gc.materialdesign.views.ButtonFlat
                 android:id="@+id/buttonFloat"
@@ -66,8 +85,7 @@
                 materialdesign:animate="true"
                 materialdesign:iconDrawable="@drawable/ic_launcher" />-->
 
-        </com.vlonjatg.progressactivity.ProgressActivity>
-
+            </RelativeLayout>
     </RelativeLayout>
 
     <View
@@ -94,22 +112,20 @@
         app:shadow_xOffset="0.5dp"
         app:shadow_yOffset="1.0dp"
         app:show_animation="@anim/fab_roll_from_down"
-        app:type="DEFAULT" />
-
-    <com.andexert.library.RippleView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginBottom="96dp"
-        android:layout_marginEnd="60dp"
-        android:layout_marginRight="60dp"
-        app:rv_type="rectangle">
+        app:rippleEffect_enabled="true"
+        app:type="DEFAULT"
+        android:visibility="invisible"/>
 
         <android.support.v7.widget.CardView
             android:id="@+id/card_fab_speeddial_action2"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
-            app:cardUseCompatPadding="true">
+            app:cardUseCompatPadding="true"
+            android:layout_gravity="bottom|end"
+            android:layout_marginBottom="96dp"
+            android:layout_marginEnd="60dp"
+            android:layout_marginRight="60dp"
+            android:visibility="invisible">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -119,7 +135,6 @@
                 android:text="Todas las fotos" />
 
         </android.support.v7.widget.CardView>
-    </com.andexert.library.RippleView>
 
     <com.software.shell.fab.ActionButton
         android:id="@+id/fab_speeddial_action2"
@@ -139,22 +154,20 @@
         app:shadow_xOffset="0.5dp"
         app:shadow_yOffset="1.0dp"
         app:show_animation="@anim/fab_roll_from_down"
-        app:type="MINI" />
-
-    <com.andexert.library.RippleView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginBottom="160dp"
-        android:layout_marginEnd="60dp"
-        android:layout_marginRight="60dp"
-        app:rv_type="rectangle">
+        app:rippleEffect_enabled="true"
+        app:type="MINI"
+        android:visibility="invisible"/>
 
         <android.support.v7.widget.CardView
             android:id="@+id/card_fab_speeddial_action1"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
-            app:cardUseCompatPadding="true">
+            app:cardUseCompatPadding="true"
+            android:layout_gravity="bottom|end"
+            android:layout_marginBottom="160dp"
+            android:layout_marginEnd="60dp"
+            android:layout_marginRight="60dp"
+            android:visibility="invisible">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -164,7 +177,6 @@
                 android:text="Fotos seleccionadas" />
 
         </android.support.v7.widget.CardView>
-    </com.andexert.library.RippleView>
 
     <com.software.shell.fab.ActionButton
         android:id="@+id/fab_speeddial_action1"
@@ -184,5 +196,6 @@
         app:shadow_xOffset="0.5dp"
         app:shadow_yOffset="1.0dp"
         app:show_animation="@anim/fab_roll_from_down"
-        app:type="MINI" />
+        app:type="MINI"
+        android:visibility="invisible"/>
 </FrameLayout>

@@ -19,6 +19,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
@@ -64,6 +65,8 @@ import fergaral.datetophoto.services.ProcessPhotosURIService;
  * Created by Parejúa on 30/03/2015.
  */
 public final class Utils {
+
+    private static final String PERMISSION_NEVER_ASKED_KEY = "permissionneverasked";
 
     public static void write(String path, String text) {
 
@@ -231,6 +234,10 @@ public final class Utils {
         startTime = System.currentTimeMillis();
 
         for(String image : photos) {
+            File imageFile = new File(image);
+            Folders.add(imageFile.getParentFile().getName(),
+                    imageFile.getParentFile());
+
             if(PhotoUtils.incorrectFormat(image)) {
                 photosMap.put(image, true);
                 numPhotos++;
@@ -253,7 +260,20 @@ public final class Utils {
         ArrayList<String> photosWithoutDate = new ArrayList<>(numPhotos);
 
         for(String photo : photos) {
-            if(photosMap.containsKey(photo) && !photosMap.get(photo)) {
+            File photoFile = new File(photo);
+
+            if(photoFile.getParentFile().getName().equals("Date To Photo originals")) {
+                //Miramos a ver si hay una foto con su mismo nombre
+                String[] nameParts = photoFile.getName().split("-");
+                String folderName = nameParts[0]; //Si está fechada, estará en esta carpeta
+                String photoName = nameParts[1]; //Si está fechada, tendrá este nombre
+
+                File folderFile = Folders.get(folderName);
+
+                if((!photosMap.containsKey(photoFile.getPath()) || !photosMap.get(photoFile.getPath()))
+                && !photosMap.containsKey(new File(folderFile.getPath(), photoName).getPath()))
+                    photosWithoutDate.add(photo);
+            }else if(photosMap.containsKey(photo) && !photosMap.get(photo)) {
                 photosWithoutDate.add(photo);
                 Log.d("TAGP", photo);
             }
@@ -743,5 +763,17 @@ public final class Utils {
         }
 
         return false;
+    }
+
+    public static boolean permissionNeverAsked(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        return prefs.getBoolean(Utils.PERMISSION_NEVER_ASKED_KEY, true);
+    }
+
+    public static void setPermissionAsked(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean(Utils.PERMISSION_NEVER_ASKED_KEY, false);
+        editor.apply();
     }
  }

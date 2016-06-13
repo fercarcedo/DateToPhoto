@@ -13,6 +13,8 @@ import android.support.v4.app.NotificationCompat;
 import com.github.machinarius.preferencefragment.PreferenceFragment;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.MyActivity;
@@ -44,6 +46,14 @@ public class SettingsFragment extends PreferenceFragment {
             entries[i] = folderNames.get(i);
         }
         //showNotification(String.valueOf(entries.length));
+
+        Arrays.sort(entries, new Comparator<String>() {
+            @Override
+            public int compare(String lhs, String rhs) {
+                return lhs.toLowerCase().compareTo(rhs.toLowerCase());
+            }
+        });
+
         listPreference.setEntries(entries);
         listPreference.setEntryValues(entries);
 

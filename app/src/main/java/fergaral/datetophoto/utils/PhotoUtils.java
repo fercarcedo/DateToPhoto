@@ -19,6 +19,7 @@ import android.provider.MediaStore;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -40,6 +41,7 @@ public final class PhotoUtils {
 
     private Context context;
     private MediaScannerConnection msConn;
+    public static final String FIRST_USE_KEY = "firstuse";
 
     /**
      * Constructor with 1 parameter
@@ -485,22 +487,49 @@ public final class PhotoUtils {
     public static void selectAllFoldersOnFirstUse(Context context) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        if(prefs.getBoolean("firstuse", true))
+        if(prefs.getBoolean(FIRST_USE_KEY, true)) {
             selectAllFolders(context);
 
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putBoolean("firstuse", false);
-        editor.apply();
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean(FIRST_USE_KEY, false);
+            editor.apply();
+        }
     }
 
     public static boolean incorrectFormat(String image) {
-        return !(image.endsWith(".jpg") || image.endsWith(".JPG") || image.endsWith(".jpeg") ||
-                image.endsWith(".JPEG") || image.endsWith(".png")  || image.endsWith(".PNG"));
+        return (!(image.endsWith(".jpg") || image.endsWith(".JPG") || image.endsWith(".jpeg") ||
+                image.endsWith(".JPEG") || image.endsWith(".png")  || image.endsWith(".PNG")));
+
+        //Puede ser que la foto sea, por ejemplo, un JPEG pero que dentro haya texto, no una imagen
+        /*BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true; //Solo queremos saber ancho y alto
+        BitmapFactory.decodeFile(image, options);
+
+        return options.outWidth == -1 || options.outHeight == -1;*/
     }
 
     public static String getName(String image) {
         String[] pathSegments = image.split("/");
 
         return pathSegments[pathSegments.length - 1];
+    }
+
+    public static void copy(File src, File dst) throws IOException {
+        FileInputStream inStream = null;
+        FileOutputStream outStream = null;
+
+        try {
+            inStream = new FileInputStream(src);
+            outStream = new FileOutputStream(dst);
+            FileChannel inChannel = inStream.getChannel();
+            FileChannel outChannel = outStream.getChannel();
+            inChannel.transferTo(0, inChannel.size(), outChannel);
+        }finally{
+            if(inStream != null)
+                inStream.close();
+
+            if(outStream != null)
+                outStream.close();
+        }
     }
 }

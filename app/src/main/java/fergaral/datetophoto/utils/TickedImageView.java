@@ -22,8 +22,6 @@ public class TickedImageView extends ImageView {
     private Bitmap mTickBmp;
     private Paint mDarkerPaint;
     private View.OnClickListener onImageClickListener;
-    private int drawingWidth;
-    private float horizontalSpacing;
     private int x, y;
 
     public TickedImageView(Context context) {
@@ -52,8 +50,6 @@ public class TickedImageView extends ImageView {
         mDarkerPaint.setColor(0x80142030);
 
         mTickBmp = BitmapFactory.decodeResource(getResources(), R.drawable.ic_done_white_48px);
-
-        horizontalSpacing = Utils.dpToPixels(2, getResources());
     }
 
     public void setSelected(boolean selected) {
@@ -70,7 +66,7 @@ public class TickedImageView extends ImageView {
         super.onDraw(canvas);
 
         if (selected) {
-            canvas.drawRect(0, 0, canvas.getWidth(), drawingWidth, mDarkerPaint);
+            canvas.drawRect(0, 0, canvas.getWidth(), getMeasuredWidth(), mDarkerPaint);
             canvas.drawBitmap(mTickBmp, x, y, null);
         }
     }
@@ -80,20 +76,11 @@ public class TickedImageView extends ImageView {
         onImageClickListener = listener;
     }
 
-    /**
-     * Sets the drawingWidth in pixels
-     *
-     * @param drawingWidth width in pixels
-     */
-    public void setDrawingWidth(int drawingWidth) {
-        this.drawingWidth = drawingWidth;
-        getLayoutParams().width = drawingWidth;
-        getLayoutParams().height = drawingWidth;
-        x = ((drawingWidth / 2) - (mTickBmp.getWidth() / 2));
-        y = (drawingWidth / 2) - (mTickBmp.getHeight() / 2);
-    }
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, widthMeasureSpec);
 
-    public float getDrawingWidth() {
-        return drawingWidth;
+        x = (getMeasuredWidth() / 2) - (mTickBmp.getWidth() / 2);
+        y = (getMeasuredWidth() / 2) - (mTickBmp.getHeight() / 2);
     }
 }

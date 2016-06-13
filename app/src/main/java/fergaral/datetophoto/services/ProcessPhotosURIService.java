@@ -338,7 +338,7 @@ public class ProcessPhotosURIService extends IntentService {
 
                 myBitmap = null;
 
-                File file2 = new File(Environment.getExternalStorageDirectory().getPath() + "/DateToPhoto");
+                File file2 = new File(Environment.getExternalStorageDirectory().getPath() + "/Date To Photo");
 
                 if(!file2.exists())
                     file2.mkdir();

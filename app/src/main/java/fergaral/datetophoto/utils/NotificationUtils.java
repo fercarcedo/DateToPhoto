@@ -12,6 +12,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.PhotosActivity;
+import fergaral.datetophoto.activities.StoragePermissionDeniedFloatingActivity;
 import fergaral.datetophoto.receivers.ActionCancelReceiver;
 
 /**
@@ -100,11 +101,42 @@ public class NotificationUtils {
     public void showStandAloneNotification(String text) {
         boolean lollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
 
+        Intent resultIntent = new Intent(mContext, PhotosActivity.class);
+        PendingIntent resultPendingIntent = PendingIntent.getActivity(
+                mContext,
+                0,
+                resultIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+
         NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext);
         notifBuilder.setContentTitle("Date To Photo")
                 .setContentText(text)
                 .setSmallIcon(lollipop ? R.drawable.ic_dtp_transp : R.drawable.ic_launcher)
-                .setTicker(text);
+                .setTicker(text)
+                .setContentIntent(resultPendingIntent)
+                .setAutoCancel(true);
+
+        NotificationManager notifManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+        notifManager.notify(NOTIFICATION_ID, notifBuilder.build());
+    }
+
+    public void showPermissionNotification() {
+        boolean lollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
+
+        Intent resultIntent = new Intent(mContext, StoragePermissionDeniedFloatingActivity.class);
+        PendingIntent resultPendingIntent = PendingIntent.getActivity(
+                mContext,
+                0,
+                resultIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+
+        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext);
+        notifBuilder.setContentTitle("Date To Photo")
+                .setContentText("Permiso necesario")
+                .setSmallIcon(lollipop ? R.drawable.ic_dtp_transp : R.drawable.ic_launcher)
+                .setTicker("Permiso necesario")
+                .setContentIntent(resultPendingIntent)
+                .setAutoCancel(true);
 
         NotificationManager notifManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
         notifManager.notify(NOTIFICATION_ID, notifBuilder.build());

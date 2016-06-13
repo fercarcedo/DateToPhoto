@@ -13,7 +13,7 @@ import android.view.Window;
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.fragments.SettingsFragment;
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends PermissionActivity {
 
     public static boolean SHOULD_REFRESH = false;
 
@@ -21,8 +21,7 @@ public class SettingsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState)
     {
 
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-        {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             getWindow().requestFeature(Window.FEATURE_CONTENT_TRANSITIONS);
             getWindow().setEnterTransition(new Fade());
             getWindow().setExitTransition(new Fade());

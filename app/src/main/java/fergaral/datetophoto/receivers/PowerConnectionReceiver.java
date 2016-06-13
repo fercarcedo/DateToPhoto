@@ -7,6 +7,7 @@ import android.os.BatteryManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
+import fergaral.datetophoto.services.CheckPhotosService;
 import fergaral.datetophoto.services.ProcessPhotosService;
 
 /**
@@ -75,6 +76,8 @@ public class PowerConnectionReceiver extends WakefulBroadcastReceiver {
                     startWakefulService(context, serviceIntent);
                 }
             }
+
+            context.startService(new Intent(context, CheckPhotosService.class));
         }
     }
 

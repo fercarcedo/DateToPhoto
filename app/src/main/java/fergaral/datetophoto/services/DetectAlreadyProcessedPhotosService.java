@@ -1,15 +1,18 @@
 package fergaral.datetophoto.services;
 
+import android.Manifest;
 import android.app.IntentService;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.media.ExifInterface;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.ContextCompat;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,6 +22,7 @@ import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.PhotosActivity;
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.receivers.PhotoRenamedAddedReceiver;
+import fergaral.datetophoto.utils.NotificationUtils;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.Utils;
 
@@ -33,6 +37,13 @@ public class DetectAlreadyProcessedPhotosService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+        if(ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            //We don't have permission
+            new NotificationUtils(this).showPermissionNotification();
+            return;
+        }
+
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
                 .setContentTitle("Date To Photo")
                 .setSmallIcon(R.drawable.ic_launcher)

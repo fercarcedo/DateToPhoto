@@ -1,5 +1,6 @@
 package fergaral.datetophoto.services;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.IntentService;
 import android.app.NotificationManager;
@@ -10,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
@@ -28,8 +30,10 @@ import android.os.ResultReceiver;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -54,7 +58,9 @@ import fergaral.datetophoto.exif.ExifTag;
 import fergaral.datetophoto.fragments.MaterialProgressDialogFragment;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.receivers.PowerConnectionReceiver;
+import fergaral.datetophoto.utils.Folders;
 import fergaral.datetophoto.utils.NotificationUtils;
+import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.Utils;
 
 public class ProcessPhotosService extends IntentService {
@@ -98,6 +104,14 @@ public class ProcessPhotosService extends IntentService {
 
         receiver = intent.getParcelableExtra("receiver");
         onBackground = intent.getBooleanExtra("onBackground", true);
+
+        //Check if we have permission to write to the external storage
+        if(ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            //We don't have permission, notify the user about it
+            mNotificationUtils.showPermissionNotification();
+            return; //We can't do anything without it
+        }
 
         if(onBackground) {
             SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -329,12 +343,20 @@ public class ProcessPhotosService extends IntentService {
 
                     long startTimeWriteDate =  System.currentTimeMillis();
 
+                    if(isAlreadyDatestamped(myBitmap, rotation)) {
+                        Toast.makeText(this, "Foto ya fechada: " + s, Toast.LENGTH_LONG).show();
+                        continue;
+                    }
+
                     Bitmap bitmap2 = writeDateOnBitmap(myBitmap, date, rotation);
 
                     long endTimeWriteDate = System.currentTimeMillis() - startTimeWriteDate;
                     double elapsedTimeWriteDate = endTimeWriteDate / 1000d;
 
                     printWriter.println("write date: " + elapsedTimeWriteDate);
+
+                    //Ahora la marcamos como ya fechada
+                    markAsAlreadyDatestamped(bitmap2, rotation);
 
                     //Este método sirve para comprobar la rotación con la segunda interfaz EXIF
                     //testEXIFDate(imgFile.getAbsolutePath());
@@ -358,11 +380,42 @@ public class ProcessPhotosService extends IntentService {
 
                         registerPhotoIntoDb(imgFile.getAbsolutePath());
                     } else {
-                        savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtp-" + imgFile.getName(), imgFile, true
-                        );
+                        if (imgFile.getParentFile().getName().equals("Date To Photo originals")) {
+                            String[] nameParts = imgFile.getName().split("-");
+                            String photoFolder = nameParts[0];
+                            String photoName = nameParts[1];
 
-                        registerPhotoIntoDb(imgFile.getAbsolutePath());
-                        registerPhotoIntoDb(imgFile.getParentFile().getAbsolutePath() + File.separator + "dtp-" + imgFile.getName());
+                            File folderFile = Folders.get(photoFolder);
+
+                            savePhoto(bitmap2, folderFile.getAbsolutePath(), "dtpo-" + photoName,
+                                    imgFile, true);
+
+                            registerPhotoIntoDb(new File(folderFile.getAbsolutePath(),
+                                    imgFile.getName()).getPath());
+                        } else {
+                            File originalsFile = new File(Environment.getExternalStorageDirectory().getPath() + "/Date To Photo originals");
+
+                            if (!originalsFile.exists())
+                                originalsFile.mkdir();
+
+                            //Guardamos la foto original en la carpeta de originales
+                            File originalPhotoFile = new File(originalsFile.getPath(), imgFile.getParentFile().getName()
+                                    + "-" +
+                                    imgFile.getName());
+
+                            try {
+                                PhotoUtils.copy(imgFile,
+                                        originalPhotoFile);
+                            } catch (IOException e) {
+                                Log.e("TAG", "Error while saving image copy");
+                            }
+
+                            savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtpo-" + imgFile.getName(), imgFile, true
+                            );
+
+                            registerPhotoIntoDb(imgFile.getAbsolutePath());
+                            scanPhoto(originalPhotoFile.getPath());
+                        }
                     }
 
                     long endTimeSavePhoto = System.currentTimeMillis() - startTimeSavePhoto;
@@ -438,6 +491,14 @@ public class ProcessPhotosService extends IntentService {
 
         if(dialogCancelled)
             dialogCancelled = false;
+    }
+
+    private boolean isAlreadyDatestamped(Bitmap myBitmap, int rotation) {
+        return false;
+    }
+
+    private void markAsAlreadyDatestamped(Bitmap myBitmap, int rotation) {
+
     }
 
     private String getExifTag(ExifInterface exif, String tag, File imgFile) {
