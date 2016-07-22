@@ -18,4 +18,9 @@
         android:orderInCategory="101"
         app:showAsAction="never" />
 
+    <item android:id="@+id/action_detect_date"
+        android:title="Detectar fecha"
+        android:orderInCategory="102"
+        app:showAsAction="never" />
+
 </menu>

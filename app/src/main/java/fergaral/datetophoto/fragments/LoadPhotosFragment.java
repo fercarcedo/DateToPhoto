@@ -1,6 +1,7 @@
 package fergaral.datetophoto.fragments;
 
 import android.app.Activity;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -9,7 +10,6 @@ import android.support.v4.app.Fragment;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.List;
 
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.utils.PhotoUtils;
@@ -25,9 +25,11 @@ public class LoadPhotosFragment extends Fragment {
     private TaskCallbacks mCallback;
     private ImagesToProcessTask loadPhotosTask;
     private String selectedFolder;
+    private Context mContext;
 
     public interface TaskCallbacks {
         void onPreExecute();
+
         void onPostExecute(ArrayList<String> result);
     }
 
@@ -37,6 +39,9 @@ public class LoadPhotosFragment extends Fragment {
 
         //La Activity debe implementar TaskCallbacks
         mCallback = (TaskCallbacks) activity;
+
+        if (activity != null && mContext == null) //Solo lo asignamos una vez
+            mContext = activity.getApplicationContext();
     }
 
     @Override
@@ -64,17 +69,14 @@ public class LoadPhotosFragment extends Fragment {
         protected void onPreExecute() {
             super.onPreExecute();
 
-            if(mCallback != null)
+            if (mCallback != null)
                 mCallback.onPreExecute();
         }
 
         @Override
         protected ArrayList<String> doInBackground(Void... voids) {
-            if(getActivity() == null)
-                return new ArrayList<>();
-
-            SQLiteDatabase photosDb = new DatabaseHelper(getActivity()).getReadableDatabase();
-            ArrayList<String> cameraImages = new PhotoUtils(getActivity()).getCameraImages();
+            SQLiteDatabase photosDb = new DatabaseHelper(mContext).getReadableDatabase();
+            ArrayList<String> cameraImages = new PhotoUtils(mContext).getCameraImages();
             //Obtenemos las fotos sin fechar de entre las que hay que procesar, ya que es más rápido identificar las que hay
             //que procesar, que no las que están sin fechars
             ArrayList<String> imagesToProcess;
@@ -82,10 +84,10 @@ public class LoadPhotosFragment extends Fragment {
             long startTime = System.currentTimeMillis();
             String s = "";
 
-            if(selectedFolder == null) {
+            if (selectedFolder == null) {
                 long startTimeImagProcess = System.currentTimeMillis();
 
-                imagesToProcess = Utils.getImagesToProcess(getActivity(), cameraImages);
+                imagesToProcess = Utils.getImagesToProcess(mContext, cameraImages);
 
                 long elapsedImagProcess = System.currentTimeMillis() - startTimeImagProcess;
 
@@ -93,17 +95,17 @@ public class LoadPhotosFragment extends Fragment {
 
                 long startTimeWithoutDate = System.currentTimeMillis();
 
-                imagesToProcess = Utils.getPhotosWithoutDate(getActivity(),
-                                                    imagesToProcess,
-                                                    photosDb);
+                imagesToProcess = Utils.getPhotosWithoutDate(mContext,
+                        imagesToProcess,
+                        photosDb);
 
                 long elapedTimeWithoutDate = System.currentTimeMillis() - startTimeWithoutDate;
 
                 s += "getPhotosWithoutDate: " + elapedTimeWithoutDate + "\n";
-            }else{
+            } else {
                 long startTimeImagProcess = System.currentTimeMillis();
 
-                imagesToProcess = Utils.getImagesToProcess(getActivity(), cameraImages, selectedFolder);
+                imagesToProcess = Utils.getImagesToProcess(mContext, cameraImages, selectedFolder);
 
                 long elapsedImagProcess = System.currentTimeMillis() - startTimeImagProcess;
 
@@ -111,9 +113,9 @@ public class LoadPhotosFragment extends Fragment {
 
                 long startTimeWithoutDate = System.currentTimeMillis();
 
-                imagesToProcess = Utils.getPhotosWithoutDate(getActivity(),
-                                                                imagesToProcess,
-                                                                photosDb);
+                imagesToProcess = Utils.getPhotosWithoutDate(mContext,
+                        imagesToProcess,
+                        photosDb);
 
                 long elapedTimeWithoutDate = System.currentTimeMillis() - startTimeWithoutDate;
 
@@ -136,34 +138,23 @@ public class LoadPhotosFragment extends Fragment {
         protected void onPostExecute(ArrayList<String> imagesToProcess) {
             super.onPostExecute(imagesToProcess);
 
-            if(mCallback != null)
+            if (mCallback != null)
                 mCallback.onPostExecute(imagesToProcess);
         }
     }
 
     public void refresh() {
-        if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
+        load(null);
+    }
+
+    public void load(String folderName) {
+        if (loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
             //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
             loadPhotosTask.cancel(true);
         }
 
         loadPhotosTask = new ImagesToProcessTask();
-        selectedFolder = null;
+        selectedFolder = folderName;
         loadPhotosTask.execute();
-    }
-
-    public void load(String folderName) {
-        if(folderName == null) {
-            refresh();
-        }else{
-            if(loadPhotosTask != null && !loadPhotosTask.isCancelled()) {
-                //Cancelamos la AsyncTask (el onPostExecute no se ejecutará)
-                loadPhotosTask.cancel(true);
-            }
-
-            loadPhotosTask = new ImagesToProcessTask();
-            selectedFolder = folderName;
-            loadPhotosTask.execute();
-        }
     }
 }

@@ -5,10 +5,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.support.annotation.NonNull;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import fergaral.datetophoto.R;
@@ -18,7 +16,7 @@ import fergaral.datetophoto.R;
  */
 public class TickedImageView extends ImageView {
 
-    private boolean selected;
+    private boolean checked;
     private Bitmap mTickBmp;
     private Paint mDarkerPaint;
     private View.OnClickListener onImageClickListener;
@@ -38,7 +36,7 @@ public class TickedImageView extends ImageView {
         super.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                setSelected(!isSelected());
+                setChecked(!isChecked());
 
                 if (onImageClickListener != null)
                     onImageClickListener.onClick(TickedImageView.this);
@@ -52,20 +50,20 @@ public class TickedImageView extends ImageView {
         mTickBmp = BitmapFactory.decodeResource(getResources(), R.drawable.ic_done_white_48px);
     }
 
-    public void setSelected(boolean selected) {
-        this.selected = selected;
+    public void setChecked(boolean checked) {
+        this.checked = checked;
         invalidate();
     }
 
-    public boolean isSelected() {
-        return selected;
+    public boolean isChecked() {
+        return checked;
     }
 
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
 
-        if (selected) {
+        if (checked) {
             canvas.drawRect(0, 0, canvas.getWidth(), getMeasuredWidth(), mDarkerPaint);
             canvas.drawBitmap(mTickBmp, x, y, null);
         }

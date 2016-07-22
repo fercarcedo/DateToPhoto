@@ -16,20 +16,18 @@ import android.view.Window;
 
 import fergaral.datetophoto.R;
 
-public class StoragePermissionDeniedFloatingActivity extends Activity {
-
-    //Indicates whether we should open settings instead,
-    //because the user clicked the remember my answer in the permission dialog
-    private boolean shouldOpenSettings;
-    private static final int STORAGE_PERMISSION_REQCODE = 3;
+public class StoragePermissionDeniedFloatingActivity extends StoragePermissionBaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(R.layout.activity_storage_permission_denied);
+        setContentView(R.layout.activity_storage_permission_denied_floating);
 
-        findViewById(R.id.permissionBtn).setOnClickListener(new View.OnClickListener() {
+        View permissionBtnView = findViewById(R.id.permissionBtn);
+
+        if(permissionBtnView != null)
+            permissionBtnView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 requestPermissionClicked(v);
@@ -38,48 +36,8 @@ public class StoragePermissionDeniedFloatingActivity extends Activity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-
-        if(ContextCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            shouldOpenSettings = !ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        }else{
-            //We have permission, simply close the floating activity
-            finish();
-        }
-    }
-
-    public void requestPermissionClicked(View view) {
-        if(shouldOpenSettings) {
-            //We take the user to the app's details screen
-            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", getPackageName(), null));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-        }else{
-            //We prompt the user for the permission
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    STORAGE_PERMISSION_REQCODE);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch(requestCode) {
-            case STORAGE_PERMISSION_REQCODE: {
-                //If result is cancelled, the resulting arrays are empty
-                if(grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    //We have permission, so we close the floating window
-                    finish();
-                }else {
-                    //Permission was rejected, so we need to update the shouldOpenSettings variable
-                    shouldOpenSettings = !ActivityCompat.shouldShowRequestPermissionRationale(this,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE);
-                }
-            }
-        }
+    public void onPermissionGranted() {
+        //We have permission, simply close the floating window
+        finish();
     }
 }

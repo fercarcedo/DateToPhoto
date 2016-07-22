@@ -81,7 +81,7 @@ public class ProgressCircle extends LinearLayout {
             onCancelListener.onCancel(view);
     }
 
-    public static abstract class OnCancelListener {
-        public abstract void onCancel(View view);
+    public interface OnCancelListener {
+        void onCancel(View view);
     }
 }

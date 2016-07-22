@@ -532,4 +532,16 @@ public final class PhotoUtils {
                 outStream.close();
         }
     }
+
+    public static boolean isCorrupted(File imageFile) {
+        if(imageFile == null)
+            return true;
+
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+
+        BitmapFactory.decodeFile(imageFile.getAbsolutePath(), options);
+
+        return options.outWidth == -1 || options.outHeight == -1;
+    }
 }

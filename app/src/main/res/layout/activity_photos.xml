@@ -31,38 +31,24 @@
             android:layout_height="match_parent"
             android:layout_below="@id/spinner_toolbar">
 
-            <fergaral.datetophoto.utils.CircularProgressWheel
-                android:id="@+id/loading_photos_prog_bar"
-                android:layout_width="75dp"
-                android:layout_height="75dp"
-                android:layout_centerInParent="true"
-                android:visibility="invisible"
-                app:matProg_barColor="@color/colorAccent"
-                app:matProg_progressIndeterminate="true"
-                app:matProg_spinSpeed="0.5"/>
-
-            <LinearLayout android:id="@+id/noPhotosLlayout"
-                android:layout_width="wrap_content"
+            <FrameLayout android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
-                android:orientation="vertical"
-                android:visibility="visible">
+                android:layout_centerInParent="true">
 
-            <ImageView android:layout_width="@dimen/no_photos_image_size"
-                android:layout_height="@dimen/no_photos_image_size"
-                android:tint="@color/colorAccent"
-                android:layout_gravity="center_horizontal"
-                android:src="@drawable/ic_check_circle_black" />
+                <include android:id="@+id/loading_photos_prog_bar"
+                    layout="@layout/progbar" />
+
+            </FrameLayout>
 
             <TextView android:id="@+id/tv_nophotos"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="No hay fotos sin fechar"
-                android:layout_gravity="center_horizontal"
                 android:textColor="@color/orange"
+                android:drawableTop="@drawable/ic_check_circle_black"
+                android:visibility="invisible"
+                android:layout_centerInParent="true"
                 android:textSize="20sp" />
-
-            </LinearLayout>
 
             <GridView
                 android:id="@+id/photos_grid"
@@ -71,8 +57,7 @@
                 android:horizontalSpacing="2dp"
                 android:numColumns="@integer/photos_grid_num_columns"
                 android:stretchMode="columnWidth"
-                android:verticalSpacing="2dp"
-                android:visibility="invisible"/>
+                android:verticalSpacing="2dp" />
 
             <!--<com.gc.materialdesign.views.ButtonFlat
                 android:id="@+id/buttonFloat"

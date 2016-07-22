@@ -76,7 +76,6 @@
         <service
             android:name=".services.RegisterPhotoURIIntoDBService"
             android:exported="false" />
-
         <service
             android:name=".services.CheckPhotosService"
             android:exported="false" />
@@ -143,8 +142,15 @@
                 android:value=".activities.PhotosActivity" />
         </activity>
         <activity android:name=".activities.StoragePermissionDeniedActivity" />
-        <activity android:name=".activities.StoragePermissionDeniedFloatingActivity"
-            android:theme="@android:style/Theme.Dialog" />
+        <activity
+            android:name=".activities.StoragePermissionDeniedFloatingActivity"
+            android:theme="@style/DialogTheme" />
+        <activity android:name=".activities.DetectDateActivity"
+            android:parentActivityName=".activities.PhotosActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".activities.PhotosActivity" />
+        </activity>
     </application>
 
 </manifest>

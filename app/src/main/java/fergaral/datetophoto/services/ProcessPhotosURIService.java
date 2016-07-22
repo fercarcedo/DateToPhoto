@@ -366,9 +366,15 @@ public class ProcessPhotosURIService extends IntentService {
                     Log.d("TAG", "No hay ruta real");
                 }
 
+                if(hasRealPath) {
+                    File imgFile = new File(filePath);
+                    hasRealPath = imgFile.exists();
+                    Log.d("TAG", "hasRealPath=" + hasRealPath);
+                }
+
                 if(!hasRealPath) {
                     wasPathFound = false;
-                    savePhoto(bitmap2, Environment.getExternalStorageDirectory().getPath() + "/DateToPhoto", "dtp-" + exifDate + ".jpg");
+                    savePhoto(bitmap2, Environment.getExternalStorageDirectory().getPath() + "/Date To Photo", "dtp-" + exifDate + ".jpg");
                 }else{
                     File imgFile = new File(filePath);
                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -584,6 +590,7 @@ public class ProcessPhotosURIService extends IntentService {
             out = null;
         } catch (Exception e) {
             e.printStackTrace();
+            Log.d("TAG", "Excepción al guardar la foto");
         }
     }
 
@@ -673,11 +680,8 @@ public class ProcessPhotosURIService extends IntentService {
         long freeMemory = maxMemory - usedMemory;
 
         long imageSize = (imageWidth * imageHeight * 4) / 1024; //Este valor era 12 unidades menos que el que debía ser
-        wasLarge = false;
 
-        if (imageSize >= freeMemory) {
-            wasLarge = true;
-        }
+        wasLarge = imageSize >= freeMemory;
 
         while (imageSize >= freeMemory) {
             imageWidth /= 1.15;

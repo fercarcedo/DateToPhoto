@@ -26,6 +26,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.PowerManager;
 import android.os.ResultReceiver;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
@@ -35,6 +36,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -59,6 +61,7 @@ import fergaral.datetophoto.fragments.MaterialProgressDialogFragment;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.receivers.PowerConnectionReceiver;
 import fergaral.datetophoto.utils.Folders;
+import fergaral.datetophoto.utils.MyResultReceiver;
 import fergaral.datetophoto.utils.NotificationUtils;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.Utils;
@@ -69,11 +72,12 @@ public class ProcessPhotosService extends IntentService {
     private static final int NOTIFICATION_ID = 1;
     public static final String ACTION_CANCEL_CHARGER_DISCONNECTED = "cancel_charger_disconnected";
     public static final String CANCEL_SERVICE = "cancel";
+    private static final int RECEIVER_POSITION = 0;
+    private static final int SECOND_RECEIVER_POSITION = 1;
 
     private MediaScannerConnection msConn;
     private boolean onBackground = true;
-    private ResultReceiver receiver;
-    private ProgressChangedListener secondListener;
+    private ResultReceiver[] receivers;
     private String tempStr = "";
     private boolean dialogCancelled;
     private boolean cancelledCharger;
@@ -87,13 +91,17 @@ public class ProcessPhotosService extends IntentService {
     private SQLiteDatabase photosDb;
     private NotificationUtils mNotificationUtils;
     private PrintWriter printWriter;
+    private boolean shouldRegisterPhoto;
+    private static boolean mRunning;
 
     public ProcessPhotosService() {
         super("ProcessPhotosService");
+        setIntentRedelivery(true);
     }
 
     @Override
     protected void onHandleIntent(Intent intent) {
+        mRunning = true;
 
         mNotificationUtils = new NotificationUtils(this);
         scale = getResources().getDisplayMetrics().density;
@@ -102,7 +110,9 @@ public class ProcessPhotosService extends IntentService {
         paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
         photosDb = new DatabaseHelper(this).getWritableDatabase();
 
-        receiver = intent.getParcelableExtra("receiver");
+        receivers = new ResultReceiver[2];
+        receivers[RECEIVER_POSITION] = intent.getParcelableExtra("receiver");
+
         onBackground = intent.getBooleanExtra("onBackground", true);
 
         //Check if we have permission to write to the external storage
@@ -134,11 +144,29 @@ public class ProcessPhotosService extends IntentService {
             public void onReceive(Context context, Intent intent) {
 
                 if(running) {
-                    secondListener = (ProgressChangedListener) intent.getSerializableExtra("listener");
+                    receivers[SECOND_RECEIVER_POSITION] = intent.getParcelableExtra("dialogreceiver");
 
-                    if (secondListener != null) {
-                        secondListener.reportTotal(total);
-                        secondListener.onProgressChanged(actual);
+                    //Release the previous reference to the Activity, so that it can be
+                    //garbage collected
+                    if(receivers[RECEIVER_POSITION] != null) {
+                        Bundle bundle = new Bundle();
+                        bundle.putInt("releaseActivity", 0);
+
+                        receivers[RECEIVER_POSITION].send(Activity.RESULT_OK, bundle);
+                    }
+
+                    if(receivers[SECOND_RECEIVER_POSITION] != null) {
+                        //reportTotal(total);
+                        Bundle bundle = new Bundle();
+                        bundle.putInt("total", total);
+
+                        receivers[SECOND_RECEIVER_POSITION].send(Activity.RESULT_OK, bundle);
+
+                        //onProgressChanged(actual);
+                        bundle = new Bundle();
+                        bundle.putInt("progress", actual);
+
+                        receivers[SECOND_RECEIVER_POSITION].send(Activity.RESULT_OK, bundle);
                     }
                 }
             }
@@ -196,12 +224,13 @@ public class ProcessPhotosService extends IntentService {
             actual = 0;
             total = galleryImages.size();
 
-            if(receiver != null)
-            {
-                Bundle bundle = new Bundle();
-                bundle.putInt("total", total);
+            for(ResultReceiver receiver : receivers) {
+                if (receiver != null) {
+                    Bundle bundle = new Bundle();
+                    bundle.putInt("total", total);
 
-                receiver.send(Activity.RESULT_OK, bundle);
+                    receiver.send(Activity.RESULT_OK, bundle);
+                }
             }
 
             LocalBroadcastManager.getInstance(this).registerReceiver(new BroadcastReceiver() {
@@ -230,8 +259,14 @@ public class ProcessPhotosService extends IntentService {
 
                     if(LOG) {
                         try {
-                            printWriter = new PrintWriter(new FileWriter(Environment.getExternalStorageDirectory().getPath()
-                            + File.separator + "Download" + File.separator + "dtptimes.txt"));
+                            File dirFile = new File(Environment.getExternalStorageDirectory().getPath()
+                                    + File.separator + "Download");
+
+                            if(!dirFile.exists())
+                                dirFile.mkdirs();
+
+                            printWriter = new PrintWriter(new FileWriter(dirFile.getPath()
+                                    + File.separator + "dtptimes.txt"));
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -305,21 +340,21 @@ public class ProcessPhotosService extends IntentService {
                     if (myBitmap == null) {
                         actual++;
 
-                        if (receiver != null) {
-                            Bundle bundle = new Bundle();
-                            bundle.putInt("progress", actual);
+                        for(ResultReceiver receiver : receivers) {
+                            if (receiver != null) {
+                                Bundle bundle = new Bundle();
+                                bundle.putInt("progress", actual);
 
-                            receiver.send(Activity.RESULT_OK, bundle);
+                                receiver.send(Activity.RESULT_OK, bundle);
+                            }
                         }
-
-                        if (secondListener != null)
-                            secondListener.onProgressChanged(actual);
 
                         mNotificationUtils.setNotificationProgress(total, actual);
 
                         //Si la imagen no pudo ser decodificada, le añadimos dtp- al nombre para no volver a procesarla
                         imgFile.renameTo(new File(
                                 imgFile.getParentFile().getAbsolutePath() + "/" + "dtp-" + imgFile.getName()));
+
                         scanPhoto(imgFile.getParentFile().getAbsolutePath() + "/" + imgFile.getName().substring(4));
 
                         continue;
@@ -378,7 +413,8 @@ public class ProcessPhotosService extends IntentService {
                         savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtpo-" + imgFile.getName(), imgFile, true
                         );
 
-                        registerPhotoIntoDb(imgFile.getAbsolutePath());
+                        if(shouldRegisterPhoto)
+                            registerPhotoIntoDb(imgFile.getAbsolutePath());
                     } else {
                         if (imgFile.getParentFile().getName().equals("Date To Photo originals")) {
                             String[] nameParts = imgFile.getName().split("-");
@@ -445,16 +481,14 @@ public class ProcessPhotosService extends IntentService {
 
                 actual++;
 
-                if(receiver != null)
-                {
-                    Bundle bundle = new Bundle();
-                    bundle.putInt("progress", actual);
+                for(ResultReceiver receiver : receivers) {
+                    if (receiver != null) {
+                        Bundle bundle = new Bundle();
+                        bundle.putInt("progress", actual);
 
-                    receiver.send(Activity.RESULT_OK, bundle);
+                        receiver.send(Activity.RESULT_OK, bundle);
+                    }
                 }
-
-                if(secondListener != null)
-                    secondListener.onProgressChanged(actual);
 
                 if(showNotif)
                     mNotificationUtils.setNotificationProgress(total, actual);
@@ -477,23 +511,70 @@ public class ProcessPhotosService extends IntentService {
             PowerConnectionReceiver.completeWakefulIntent(intent);
         }
 
+        for(ResultReceiver receiver : receivers) {
+            if (receiver != null) {
+                Bundle bundle = new Bundle();
+                bundle.putString("end", "end");
 
-        if(receiver != null)
-        {
-            Bundle bundle = new Bundle();
-            bundle.putString("end", "end");
-
-            receiver.send(Activity.RESULT_OK, bundle);
+                receiver.send(Activity.RESULT_OK, bundle);
+            }
         }
-
-        if(secondListener != null)
-            secondListener.reportEnd(false);
 
         if(dialogCancelled)
             dialogCancelled = false;
+
+        mRunning = false;
     }
 
     private boolean isAlreadyDatestamped(Bitmap myBitmap, int rotation) {
+        int upperLeft = myBitmap.getPixel(0, 0);
+        int upperRight = myBitmap.getPixel(myBitmap.getWidth() - 1, 0);
+        int lowerLeft = myBitmap.getPixel(0, myBitmap.getHeight() - 1);
+        int lowerRight = myBitmap.getPixel(myBitmap.getWidth() - 1, myBitmap.getHeight() - 1);
+
+        PrintWriter printWriter = null;
+
+        try {
+            printWriter = new PrintWriter(
+                    new BufferedWriter(
+                            new FileWriter(Environment.getExternalStorageDirectory().getPath()
+                                    + File.separator + "Download" + File.separator + "dtpcolors.txt")));
+
+            if (Utils.getColor(upperLeft) == Color.BLUE)
+                printWriter.println("Superior izquierda bien");
+            else
+                printWriter.println("Superior izquierda mal, el color era " + Utils.getColorName(
+                        Utils.getColor(upperLeft)
+                ));
+
+            if(Utils.getColor(upperRight) == Color.RED)
+                printWriter.println("Superior derecha bien");
+            else
+                printWriter.println("Superior derecha mal, el color era " + Utils.getColorName(
+                        Utils.getColor(upperRight)
+                ));
+
+            if(Utils.getColor(lowerLeft) == Color.GREEN)
+                printWriter.println("Inferior izquierda bien");
+            else
+                printWriter.println("Inferior izquierda mal, el color era " + Utils.getColorName(
+                        Utils.getColor(lowerLeft)
+                ));
+
+            if(Utils.getColor(lowerRight) == Color.YELLOW)
+                printWriter.println("Inferior derecha bien");
+            else
+                printWriter.println("Inferior derecha mal, el color era " + Utils.getColorName(
+                        Utils.getColor(lowerRight)
+                ));
+
+        }catch(IOException e) {
+            e.printStackTrace();
+        }finally{
+            if(printWriter != null)
+                printWriter.close();
+        }
+
         return false;
     }
 
@@ -788,6 +869,7 @@ public class ProcessPhotosService extends IntentService {
 
     public void savePhoto(Bitmap bmp, String basePath, String name, File imageFrom, boolean keepOrientation)
     {
+        shouldRegisterPhoto = true;
         File imageFileFolder = new File(basePath);
 
         FileOutputStream out = null;
@@ -817,8 +899,25 @@ public class ProcessPhotosService extends IntentService {
 
             long renameStartTime = System.currentTimeMillis();
 
-            if(imageFileName.getName().startsWith("dtpo-"))  //Si se cumple, sobreescribimos
-                imageFileName.renameTo(new File(imageFileName.getParentFile().getAbsolutePath() + "/" + imageFileName.getName().substring(5)));
+            if(imageFileName.getName().startsWith("dtpo-")) { //Si se cumple, sobreescribimos
+                File previousFile = new File(imageFileName.toString());
+                File originalFile = new File(imageFileName.getParentFile().getAbsolutePath() +
+                        "/" + imageFileName.getName().substring(5));
+
+                //Check if copy is corrupted
+                boolean renamed = false;
+                if(!PhotoUtils.isCorrupted(imageFileName)) {
+                    renamed = imageFileName.renameTo(
+                            originalFile);
+                }
+
+                if(previousFile.exists())
+                    previousFile.delete();
+
+                scanPhoto(previousFile.toString());
+
+                shouldRegisterPhoto = renamed;
+            }
 
             long renameTimeMillis = System.currentTimeMillis() - renameStartTime;
             double renameTime = renameTimeMillis / 1000d;
@@ -908,36 +1007,22 @@ public class ProcessPhotosService extends IntentService {
         }
     }
 
-    public void scanPhoto(final String imageFileName)
-    {
+    public void scanPhoto(String imageFileName) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            MediaScannerConnection.scanFile(
+                    getApplicationContext(),
+                    new String[]{imageFileName},
+                    null,
+                    new MediaScannerConnection.OnScanCompletedListener() {
+                        @Override
+                        public void onScanCompleted(String path, Uri uri) {
 
-       /*     msConn = new MediaScannerConnection(MyActivity.this,new MediaScannerConnection.MediaScannerConnectionClient()
-        {
-            public void onMediaScannerConnected()
-            {
-                msConn.scanFile(imageFileName, null);
-            }
-            public void onScanCompleted(String path, Uri uri)
-            {
-                msConn.disconnect();
-            }
-        });
-        msConn.connect();*/
-
-        /*Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        intent.setData(Uri.parse(imageFileName));
-        sendBroadcast(intent);*/
-
-        MediaScannerConnection.scanFile(
-                getApplicationContext(),
-                new String[]{imageFileName},
-                null,
-                new MediaScannerConnection.OnScanCompletedListener() {
-                    @Override
-                    public void onScanCompleted(String path, Uri uri) {
-
-                    }
-                });
+                        }
+                    });
+        } else {
+            sendBroadcast(new Intent(Intent.ACTION_MEDIA_MOUNTED,
+                    Uri.parse("file://" + imageFileName)));
+        }
     }
 
     public void moveEXIFdata(File imageFrom, File imageTo)
@@ -1075,5 +1160,15 @@ public class ProcessPhotosService extends IntentService {
         }
 
         tempStr += "\n";
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mRunning = false;
+    }
+
+    public static boolean isRunning() {
+        return mRunning;
     }
 }

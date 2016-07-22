@@ -1,14 +1,20 @@
 package fergaral.datetophoto.fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
+import fergaral.datetophoto.activities.MyActivity;
 import fergaral.datetophoto.activities.PhotosActivity;
 import fergaral.datetophoto.activities.ProgressActivity;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
+import fergaral.datetophoto.utils.MyResultReceiver;
 import fergaral.datetophoto.utils.ProgressListener;
 import fergaral.datetophoto.utils.Utils;
 
@@ -22,6 +28,7 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
     private ArrayList<String> selectedPaths;
     private int total;
     private boolean searchPhotos, shareAction;
+    private boolean connectToRunningService;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -39,17 +46,33 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
         if(arguments.containsKey(PhotosActivity.ACTION_SHARE_KEY))
             shareAction = arguments.getBoolean(PhotosActivity.ACTION_SHARE_KEY, false);
 
+        if(arguments.containsKey(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY))
+            connectToRunningService = arguments.getBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY);
+
         Log.d("TAG", "containsSearch: " + arguments.containsKey(ProgressActivity.SEARCH_PHOTOS_KEY));
         Log.d("TAG", "containsSelectedPaths: " + arguments.containsKey(ProgressActivity.SELECTED_PATHS_KEY));
         Log.d("TAG", "selectedPaths!=null" + (selectedPaths != null));
 
-        if(!searchPhotos) {
-            if(!shareAction)
-                Utils.startProcessPhotosService(getActivity(), this, selectedPaths);
-            else
-                Utils.startProcessPhotosURIService(getActivity(), this, selectedPaths);
-        }else
-            Utils.searchForAlreadyProcessedPhotos(getActivity(), this);
+        if(!connectToRunningService) {
+            if (!searchPhotos) {
+                if (!shareAction)
+                    Utils.startProcessPhotosService(getActivity(), this, selectedPaths);
+                else
+                    Utils.startProcessPhotosURIService(getActivity(), this, selectedPaths);
+            } else
+                Utils.searchForAlreadyProcessedPhotos(getActivity(), this);
+        }else{
+            //We need to provide the running service another listener by sending a broadcast
+            Intent intent = new Intent(MyActivity.INTENT_QUERY_ACTION);
+            MyResultReceiver resultReceiver = new MyResultReceiver(new Handler());
+            resultReceiver.setReceiver(this);
+
+            intent.putExtra("dialogreceiver", resultReceiver);
+
+            LocalBroadcastManager.getInstance(getActivity()).sendBroadcast(
+                    intent
+            );
+        }
     }
 
     @Override

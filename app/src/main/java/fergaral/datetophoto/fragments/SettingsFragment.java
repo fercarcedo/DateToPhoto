@@ -54,8 +54,10 @@ public class SettingsFragment extends PreferenceFragment {
             }
         });
 
-        listPreference.setEntries(entries);
-        listPreference.setEntryValues(entries);
+        if(entries.length != 0) {
+            listPreference.setEntries(entries);
+            listPreference.setEntryValues(entries);
+        }
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
         boolean firstUse = sharedPreferences.getBoolean("firstuse", true);

@@ -2,28 +2,21 @@ package fergaral.datetophoto.activities;
 
 import android.Manifest;
 import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.BitmapDrawable;
+import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.preference.PreferenceManager;
-import android.provider.ContactsContract;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v7.widget.AppCompatSpinner;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
@@ -32,21 +25,17 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
-import com.andexert.library.RippleView;
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.resource.bitmap.GlideBitmapDrawable;
 import com.bumptech.glide.load.resource.drawable.GlideDrawable;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
@@ -62,12 +51,10 @@ import java.util.List;
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.fragments.LoadPhotosFragment;
 import fergaral.datetophoto.fragments.ProgressHeadlessFragment;
-import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.receivers.ActionCancelReceiver;
-import fergaral.datetophoto.receivers.PhotosObserver;
-import fergaral.datetophoto.utils.CircularProgressWheel;
+import fergaral.datetophoto.services.ProcessPhotosService;
+import fergaral.datetophoto.utils.AnimationUtils;
 import fergaral.datetophoto.utils.PhotoUtils;
-import fergaral.datetophoto.utils.ProgressCircle;
 import fergaral.datetophoto.utils.ProgressListener;
 import fergaral.datetophoto.utils.TickedImageView;
 import fergaral.datetophoto.utils.Utils;
@@ -86,6 +73,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
     private static final String SELECTED_PHOTOS_KEY = "selectedPhotos";
     private static final String FAB_PRESSED_KEY = "fabPressed";
     public static final String EXTRA_IMAGE_URI = "fergaraldatetophotoextraimageuri";
+    public static final String CONNECT_TO_RUNNING_SERVICE_KEY = "connecttorunningservice";
     public static boolean SHOULD_REFRESH_GRID = false;
     public static boolean IS_PROCESSING = false;
 
@@ -101,9 +89,10 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
     private ArrayList<String> mImagesToProcess;
     private LoadPhotosFragment loadPhotosFragment;
     private boolean isRefreshing;
-    private CircularProgressWheel loadingProgBar;
+    private View loadingProgBar;
     private AppCompatSpinner foldersSpinner;
     private int lastSelectedSpinnerPosition;
+    public boolean shouldShowLoading;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -112,6 +101,23 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.tool_bar);
         setSupportActionBar(toolbar);
+
+        if(savedInstanceState == null) {
+            if(ProcessPhotosService.isRunning()) {
+                showProgressDialog(false, true);
+            }
+        }
+
+        TextView noPhotosTv = (TextView) findViewById(R.id.tv_nophotos);
+
+        if(noPhotosTv != null) {
+            Drawable drawable = DrawableCompat.wrap(
+                    ContextCompat.getDrawable(this, R.drawable.ic_check_circle_black));
+
+            DrawableCompat.setTint(drawable, ContextCompat.getColor(this, R.color.colorAccent));
+
+            noPhotosTv.setCompoundDrawables(null, drawable, null, null);
+        }
 
         if(savedInstanceState != null)
             lastSelectedSpinnerPosition = savedInstanceState.getInt(LAST_SELECTED_SPINNER_POSITION_KEY, 0);
@@ -125,7 +131,12 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
         PhotoUtils.selectAllFoldersOnFirstUse(this);
 
-        final List<String> folders = new ArrayList<>(Arrays.asList(Utils.getFoldersToProcess(this)));
+        String[] foldersArray = Utils.getFoldersToProcess(this);
+        final List<String> folders = new ArrayList<>();
+
+        for(String folder : foldersArray)
+            if(folder != null && !folder.trim().isEmpty())
+                folders.add(folder);
 
         Collections.sort(folders, new Comparator<String>() {
             @Override
@@ -151,7 +162,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
             }
         });
 
-        loadingProgBar = (CircularProgressWheel) findViewById(R.id.loading_photos_prog_bar);
+        loadingProgBar = findViewById(R.id.loading_photos_prog_bar);
         processPhotosBtn = (ActionButton) findViewById(R.id.btnProcessSelectedPhotos);
         fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
         fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
@@ -280,6 +291,20 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
             checkSharedPhotos(savedInstanceState, intent);
         }
+
+        photosGrid.post(new Runnable() {
+            @Override
+            public void run() {
+                for(int i = 0; i < photosGrid.getChildCount(); i++) {
+                    if(photosGrid.getChildAt(i) instanceof TickedImageView) {
+                        TickedImageView imageView = (TickedImageView) photosGrid.getChildAt(i);
+                        Toast.makeText(PhotosActivity.this,
+                                String.valueOf(imageView.isChecked()),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -299,6 +324,9 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
                 break;
             case R.id.action_refresh:
                 refreshGrid();
+                break;
+            case R.id.action_detect_date:
+                Utils.startActivityCompat(this, new Intent(this, DetectDateActivity.class));
                 break;
         }
 
@@ -327,7 +355,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         if(hideNoPhotosTextView)
             hideNoPhotosTextView = false;
 
-        loadingProgBar.setVisibility(View.INVISIBLE);
+        hideLoading();
 
         if(!PhotosActivity.IS_PROCESSING) {
             if (imagesToProcess.size() == 0) {
@@ -344,7 +372,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         public PhotosAdapter(List<String> images) {
             this.images = images;
 
-            if(images != null && images.size() != 0) {
+            if(images != null && images.size() != 0 && isNoPhotosScreenShown()) {
                 hideNoPhotosScreen();
             }
         }
@@ -376,14 +404,14 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
             TickedImageView thumbV = (TickedImageView) row.findViewById(R.id.thumb);
 
             //Por si la TickedImageView fue reciclada, la desmarcamos
-            thumbV.setSelected(selectedPaths.contains(images.get(position)));
+            thumbV.setChecked(selectedPaths.contains(images.get(position)));
 
             thumbV.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     TickedImageView view = (TickedImageView) v;
 
-                    if (view.isSelected())
+                    if (view.isChecked())
                         selectedPaths.add(images.get(position));
                     else
                         selectedPaths.remove(images.get(position));
@@ -455,7 +483,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
                 anim.start();
             }*/
 
-            coverView.setVisibility(View.INVISIBLE);
+            hideCoverView();
 
             //Al estar pulsado previamente, el icono que había era el aspa, así que lo cambiamos por el tick
             processPhotosBtn.setImageResource(R.drawable.ic_done_24px);
@@ -482,7 +510,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
                 anim.start();
             }*/
 
-            coverView.setVisibility(View.VISIBLE);
+            showCoverView();
 
             //Al no estar pulsado previamente, el icono que había era el tick, así que lo cambiamos por el aspa
             processPhotosBtn.setImageResource(R.drawable.ic_clear_24dp);
@@ -540,13 +568,6 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         }
 
         adapter.notifyDataSetChanged();
-    }
-
-    private void checkImagesToProcessEmpty(PhotosAdapter adapter) {
-        if (adapter.isEmpty() && !hideNoPhotosTextView) {
-            showNoPhotosScreen();
-            processPhotosBtn.hide();
-        }
     }
 
     @Override
@@ -796,30 +817,63 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         //nophotosView.setVisibility(View.VISIBLE);
         photosGrid.setVisibility(View.GONE);
 
-        LinearLayout noPhotoslLayout = (LinearLayout) findViewById(R.id.noPhotosLlayout);
+        //Ocultamos el FAB si se estaba mostrando
+        if(processPhotosBtn.isShown())
+            processPhotosBtn.hide();
 
-        if(noPhotoslLayout != null)
-            noPhotoslLayout.setVisibility(View.VISIBLE);
+        final TextView noPhotosTv = (TextView) findViewById(R.id.tv_nophotos);
+
+        if(noPhotosTv != null)
+            AnimationUtils.showWithCircularReveal(noPhotosTv, PhotosActivity.this);
+    }
+
+    private boolean isNoPhotosScreenShown() {
+        View noPhotosView = findViewById(R.id.tv_nophotos);
+
+        return noPhotosView != null && noPhotosView.getVisibility() == View.VISIBLE;
     }
 
     private void hideNoPhotosScreen() {
         //nophotosView.setVisibility(View.INVISIBLE);
         photosGrid.setVisibility(View.VISIBLE);
 
-        LinearLayout noPhotoslLayout = (LinearLayout) findViewById(R.id.noPhotosLlayout);
+        final TextView noPhotosTv = (TextView) findViewById(R.id.tv_nophotos);
 
-        if(noPhotoslLayout != null)
-            noPhotoslLayout.setVisibility(View.INVISIBLE);
+        if(noPhotosTv != null)
+            AnimationUtils.hideWithCircularReveal(noPhotosTv, PhotosActivity.this);
     }
 
-    private void showLoading() {
+    private void hideLoading() {
+        shouldShowLoading = false;
+
         if(loadingProgBar != null)
-            loadingProgBar.setVisibility(View.VISIBLE);
+            loadingProgBar.setVisibility(View.INVISIBLE);
+    }
+
+    public void showLoading() {
+        TextView noPhotosTv = (TextView) findViewById(R.id.tv_nophotos);
+        shouldShowLoading = true;
+
+        if(loadingProgBar != null) {
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                if(noPhotosTv == null || noPhotosTv.getVisibility() != View.VISIBLE) {
+                    loadingProgBar.setVisibility(View.VISIBLE);
+                }//If no photos layout is shown, hide effect will take place, no need to hide drawable right now
+            }else{
+                loadingProgBar.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     private void showProgressDialog(boolean searchPhotos) {
+        showProgressDialog(searchPhotos, false);
+    }
+
+    private void showProgressDialog(boolean searchPhotos, boolean connectToRunningService) {
         ProgressDialogFragment dialogFragment = new ProgressDialogFragment();
         Bundle args = new Bundle();
+
+        args.putBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY, connectToRunningService);
 
         if(searchPhotos) {
             //Buscamos las fotos sin fechar (es el primer uso)
@@ -848,8 +902,9 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
     public static class ProgressDialogFragment extends DialogFragment implements ProgressListener {
         private ProgressHeadlessFragment mHeadless;
         private boolean searchPhotos, shareAction;
+        private boolean connectToRunningService;
         private ArrayList<String> selectedPaths;
-        private int total = 100;
+        private static int total = 100, actual;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
@@ -860,6 +915,9 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
             if(arguments.containsKey(ProgressActivity.SEARCH_PHOTOS_KEY))
                 searchPhotos = arguments.getBoolean(ProgressActivity.SEARCH_PHOTOS_KEY);
+
+            if(arguments.containsKey(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY))
+                connectToRunningService = arguments.getBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY);
 
             if(searchPhotos)
                 total = new PhotoUtils(getActivity()).getCameraImages().size();
@@ -898,6 +956,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
                 fragmentArgs.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, searchPhotos);
                 fragmentArgs.putStringArrayList(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
                 fragmentArgs.putBoolean(PhotosActivity.ACTION_SHARE_KEY, shareAction);
+                fragmentArgs.putBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY, connectToRunningService);
 
                 mHeadless.setArguments(fragmentArgs);
                 mHeadless.setTargetFragment(this, 0);
@@ -914,6 +973,8 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
                             : "Tus fotos están siendo fechadas. Relájate y haz otras cosas mientras tanto")
                     .progress(false, total, true)
                     .build();
+
+            dialog.setProgress(actual);
 
             if(!searchPhotos) {
                 dialog.setActionButton(DialogAction.NEGATIVE, "Cancelar");
@@ -932,12 +993,14 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         public void reportTotal(int total) {
             MaterialDialog dialog = (MaterialDialog) getDialog();
             dialog.setMaxProgress(total);
+            ProgressDialogFragment.total = total;
         }
 
         @Override
         public void onProgressChanged(int progress, int actual) {
             MaterialDialog dialog = (MaterialDialog) getDialog();
             dialog.setProgress(actual);
+            ProgressDialogFragment.actual = actual;
         }
 
         @Override
@@ -977,5 +1040,35 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         SharedPreferences.Editor editor = prefs.edit();
         editor.putBoolean(SEARCH_PHOTOS_FIRST_USE_KEY, searchPhotosFirstUse);
         editor.apply();
+    }
+
+    private void showCoverView() {
+        //center for reveal animation
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            int cx = (int) (processPhotosBtn.getX() + (processPhotosBtn.getWidth() / 2));
+
+            int cy = (int) (processPhotosBtn.getY() + (processPhotosBtn.getHeight() / 2));
+
+            float finalRadius = (float) Math.hypot(coverView.getWidth(), coverView.getHeight());
+
+            AnimationUtils.showWithCircularReveal(coverView, this, cx, cy, finalRadius);
+        }else{
+            coverView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideCoverView() {
+        //center for reveal animation
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            int cx = (int) (processPhotosBtn.getX() + (processPhotosBtn.getWidth() / 2));
+
+            int cy = (int) (processPhotosBtn.getY() + (processPhotosBtn.getHeight() / 2));
+
+            float initialRadius = (float) Math.hypot(coverView.getWidth(), coverView.getHeight());
+
+            AnimationUtils.hideWithCircularReveal(coverView, this, cx, cy, initialRadius);
+        }else{
+            coverView.setVisibility(View.INVISIBLE);
+        }
     }
 }

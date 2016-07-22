@@ -2,6 +2,8 @@ package fergaral.datetophoto.utils;
 
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.os.PowerManager;
 import android.os.ResultReceiver;
 
@@ -26,46 +28,46 @@ public class MyResultReceiver extends ResultReceiver {
         super(handler);
     }
 
-    public void setReceiver(ProgressChangedListener receiver)
-    {
+    public void setReceiver(ProgressChangedListener receiver) {
         this.receiver = receiver;
     }
 
-    public void setWakeLock(PowerManager.WakeLock wakeLock)
-    {
-        if(wakeLock != null)
+    public void setWakeLock(PowerManager.WakeLock wakeLock) {
+        if (wakeLock != null)
             this.wakeLock = wakeLock;
 
     }
 
-    public PowerManager.WakeLock getWakeLock()
-    {
+    public PowerManager.WakeLock getWakeLock() {
         return wakeLock;
     }
-    
+
     @Override
-    protected void onReceiveResult(int resultCode, Bundle resultData)
-    {
-        if(receiver != null)
-        {
-            if(resultData.containsKey("total")) {
-                if(wakeLock != null)
-                    wakeLock.acquire();
+    protected void onReceiveResult(int resultCode, Bundle resultData) {
+        if (resultData.containsKey("releaseActivity"))
+            receiver = null; //Release activity so that it can be garbage collected
+
+        if (resultData.containsKey("total")) {
+            if (wakeLock != null)
+                wakeLock.acquire();
+            if(receiver != null)
                 receiver.reportTotal(resultData.getInt("total"));
-            }
-            if(resultData.containsKey("progress")) {
+        }
+        if (resultData.containsKey("progress")) {
+            if(receiver != null)
                 receiver.onProgressChanged(resultData.getInt("progress"));
-            }
-            if(resultData.containsKey("end")) {
-                if(wakeLock != null && wakeLock.isHeld())
-                    wakeLock.release();
+        }
+        if (resultData.containsKey("end")) {
+            if (wakeLock != null && wakeLock.isHeld())
+                wakeLock.release();
+            if(receiver != null)
                 receiver.reportEnd(false);
-            }
-            if(resultData.containsKey("endShared")) {
-                if(wakeLock != null && wakeLock.isHeld())
-                    wakeLock.release();
+        }
+        if (resultData.containsKey("endShared")) {
+            if (wakeLock != null && wakeLock.isHeld())
+                wakeLock.release();
+            if(receiver != null)
                 receiver.reportEnd(true);
-            }
         }
     }
 }

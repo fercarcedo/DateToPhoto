@@ -13,6 +13,7 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -459,9 +460,16 @@ public final class Utils {
         Cursor cursor = cursorLoader.loadInBackground();
 
         int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-        cursor.moveToFirst();
+        boolean hasResult = cursor.moveToFirst();
 
-        return cursor.getString(columnIndex);
+        if(hasResult) {
+            String result = cursor.getString(columnIndex);
+            cursor.close();
+            return result;
+        }else{
+            cursor.close();
+            return null;
+        }
     }
 
     public static void startProcessPhotosService(Context context, ProgressChangedListener listener, ArrayList<String> selectedPaths) {
@@ -775,5 +783,54 @@ public final class Utils {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putBoolean(Utils.PERMISSION_NEVER_ASKED_KEY, false);
         editor.apply();
+    }
+
+    public static int getColor(int rgb) {
+       return getColor(rgbToHSV(rgb));
+    }
+
+    public static float[] rgbToHSV(int rgb) {
+        float hsv[] = new float[3];
+        Color.colorToHSV(rgb, hsv);
+
+        return hsv;
+    }
+
+    public static int getColor(float[] hsb) {
+        if      (hsb[1] < 0.1 && hsb[2] > 0.9) return Color.WHITE;
+        else if (hsb[2] < 0.1) return Color.BLACK;
+        else {
+            float deg = hsb[0]*360;
+            if      (deg >=   0 && deg <  30) return Color.RED;
+            else if (deg >=  30 && deg <  90) return Color.YELLOW;
+            else if (deg >=  90 && deg < 150) return Color.GREEN;
+            else if (deg >= 150 && deg < 210) return Color.CYAN;
+            else if (deg >= 210 && deg < 270) return Color.BLUE;
+            else if (deg >= 270 && deg < 330) return Color.MAGENTA;
+            else return Color.RED;
+        }
+    }
+
+    public static String getColorName(int color) {
+        switch(color) {
+            case Color.WHITE:
+                return "WHITE";
+            case Color.BLACK:
+                return "BLACK";
+            case Color.RED:
+                return "RED";
+            case Color.YELLOW:
+                return "YELLOW";
+            case Color.GREEN:
+                return "GREEN";
+            case Color.CYAN:
+                return "CYAN";
+            case Color.BLUE:
+                return "BLUE";
+            case Color.MAGENTA:
+                return "MAGENTA";
+            default:
+                return "UNDEFINED";
+        }
     }
  }

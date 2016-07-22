@@ -10,7 +10,6 @@ android {
         targetSdkVersion 23
         versionCode 37
         versionName "0.10.14"
-        vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
         release {
@@ -23,7 +22,10 @@ android {
 }
 
 repositories {
-    maven { url "https://jitpack.io" }
+    mavenCentral()
+    maven {
+        url "https://jitpack.io"
+    }
 }
 
 dependencies {
@@ -44,6 +46,8 @@ dependencies {
     compile 'com.github.lecho:hellocharts-library:1.5.5@aar'
     compile 'com.github.lzyzsd:circleprogress:1.1.0@aar'
     compile 'com.afollestad.material-dialogs:core:0.8.5.9'
+    compile 'com.google.android.gms:play-services-drive:9.2.0'
+    compile 'com.google.android.gms:play-services-vision:9.2.0'
 }
 
 

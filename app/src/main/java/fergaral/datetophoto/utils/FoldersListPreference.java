@@ -80,42 +80,49 @@ public class FoldersListPreference extends ListPreference {
     protected void showDialog(Bundle state) {
         restoreCheckedEntries();
 
-        new MaterialDialog.Builder(mContext)
+        MaterialDialog.Builder builder = new MaterialDialog.Builder(mContext)
                 .title("Carpetas que se procesarán")
                 .items(getEntries())
-                .positiveText("Aceptar")
-                .negativeText("Cancelar")
+                .positiveText("Aceptar");
+
+        CharSequence[] entryValues = getEntryValues();
+
+        if(entryValues.length == 1 && entryValues[0].equals("nofolders")) {
+            builder.build().show();
+        }else {
+            builder.negativeText("Cancelar")
                 .itemsCallbackMultiChoice(mClickedDialogEntryIndices.toArray(new Integer[mClickedDialogEntryIndices.size()]),
-                        new MaterialDialog.ListCallbackMultiChoice() {
-                            @Override
-                            public boolean onSelection(MaterialDialog materialDialog, Integer[] integers, CharSequence[] charSequences) {
-                                onClick(null, DialogInterface.BUTTON_POSITIVE);
-                                materialDialog.dismiss();
+                    new MaterialDialog.ListCallbackMultiChoice() {
+                        @Override
+                        public boolean onSelection(MaterialDialog materialDialog, Integer[] integers, CharSequence[] charSequences) {
+                            onClick(null, DialogInterface.BUTTON_POSITIVE);
+                            materialDialog.dismiss();
 
-                                CharSequence[] entryValues = getEntryValues();
-                                if (entryValues != null) {
-                                    StringBuffer value = new StringBuffer();
-                                    for ( int i=0; i<entryValues.length; i++ ) {
-                                        if (Utils.containsInteger(i, integers)) {
-                                            value.append(entryValues[i]).append(SEPARATOR);
-                                        }
-                                    }
-
-                                    if (callChangeListener(value)) {
-                                        String val = value.toString();
-                                        if ( val.length() > 0 )
-                                            val = val.substring(0, val.length()-SEPARATOR.length());
-                                        setValue(val);
+                            CharSequence[] entryValues = getEntryValues();
+                            if (entryValues != null) {
+                                StringBuffer value = new StringBuffer();
+                                for (int i = 0; i < entryValues.length; i++) {
+                                    if (Utils.containsInteger(i, integers)) {
+                                        value.append(entryValues[i]).append(SEPARATOR);
                                     }
                                 }
 
-                                setFoldersSummary();
-
-                                SettingsActivity.SHOULD_REFRESH = true;
-                                
-                                return true;
+                                if (callChangeListener(value)) {
+                                    String val = value.toString();
+                                    if (val.length() > 0)
+                                        val = val.substring(0, val.length() - SEPARATOR.length());
+                                    setValue(val);
+                                }
                             }
-                        }).build().show();
+
+                            setFoldersSummary();
+
+                            SettingsActivity.SHOULD_REFRESH = true;
+
+                            return true;
+                        }
+                    }).build().show();
+        }
     }
 
     public static String[] parseStoredValue(CharSequence val) {

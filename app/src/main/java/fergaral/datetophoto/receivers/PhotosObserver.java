@@ -36,7 +36,8 @@ public class PhotosObserver extends ContentObserver {
         Media media = readFromMediaStore(mContext,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 
-        Toast.makeText(mContext, "Detected " + media.getFile().getName(), Toast.LENGTH_SHORT).show();
+        if(media != null && media.getFile() != null)
+            Toast.makeText(mContext, "Detected " + media.getFile().getName(), Toast.LENGTH_SHORT).show();
     }
 
     private Media readFromMediaStore(Context context, Uri uri) {
