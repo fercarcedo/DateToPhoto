@@ -18,6 +18,7 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v7.widget.AppCompatSpinner;
+import android.support.v7.widget.AppCompatTextView;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -108,15 +109,16 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
             }
         }
 
-        TextView noPhotosTv = (TextView) findViewById(R.id.tv_nophotos);
+        AppCompatTextView noPhotosTv = (AppCompatTextView) findViewById(R.id.tv_nophotos);
 
         if(noPhotosTv != null) {
             Drawable drawable = DrawableCompat.wrap(
-                    ContextCompat.getDrawable(this, R.drawable.ic_check_circle_black));
+                    ContextCompat.getDrawable(this, R.drawable.ic_check_circle_black)
+            );
 
             DrawableCompat.setTint(drawable, ContextCompat.getColor(this, R.color.colorAccent));
 
-            noPhotosTv.setCompoundDrawables(null, drawable, null, null);
+            noPhotosTv.setCompoundDrawablesWithIntrinsicBounds(null, drawable, null, null);
         }
 
         if(savedInstanceState != null)
@@ -318,16 +320,16 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         switch(item.getItemId()) {
             case R.id.action_settings:
                 Utils.startActivityCompat(this, new Intent(this, SettingsActivity.class));
-                break;
+                return true;
             case R.id.action_about:
                 showAboutDialog();
-                break;
+                return true;
             case R.id.action_refresh:
                 refreshGrid();
-                break;
+                return true;
             case R.id.action_detect_date:
                 Utils.startActivityCompat(this, new Intent(this, DetectDateActivity.class));
-                break;
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
