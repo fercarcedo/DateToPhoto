@@ -119,28 +119,6 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".activities.DiskSpaceUsageActivity"
-            android:label="@string/title_activity_disk_space_usage"
-            android:parentActivityName=".activities.MyActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="fergaral.datetophoto.activities.MyActivity" />
-        </activity>
-        <activity
-            android:name=".activities.TutorialActivity"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"
-            android:label="@string/title_activity_tutorial"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".activities.ProgressActivity"
-            android:label="@string/activity_progress_title"
-            android:parentActivityName=".activities.PhotosActivity"
-            android:theme="@style/NoAnimTheme">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".activities.PhotosActivity" />
-        </activity>
         <activity android:name=".activities.StoragePermissionDeniedActivity" />
         <activity
             android:name=".activities.StoragePermissionDeniedFloatingActivity"

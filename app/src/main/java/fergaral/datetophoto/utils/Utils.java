@@ -49,9 +49,11 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.Adler32;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
@@ -93,7 +95,13 @@ public final class Utils {
             return new String[] {""};
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getString(context.getString(R.string.pref_folderstoprocess_key), "").split(FoldersListPreference.SEPARATOR);
+        Set<String> foldersToProcess = prefs.getStringSet(context.getString(R.string.pref_folderstoprocess_key), null);
+
+        if (foldersToProcess == null) {
+            foldersToProcess = new HashSet<>(PhotoUtils.selectAllFolders(context));
+        }
+
+        return foldersToProcess.toArray(new String[foldersToProcess.size()]);
     }
 
     public static boolean processSelectedFolder(Context context, String folderName)

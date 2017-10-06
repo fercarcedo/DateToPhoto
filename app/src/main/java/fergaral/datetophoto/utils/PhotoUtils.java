@@ -29,6 +29,7 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -470,18 +471,15 @@ public final class PhotoUtils {
         MediaScannerConnection.scanFile(context, new String[]{filePath}, null, null);
     }
 
-    public static void selectAllFolders(Context context) {
+    public static List<String> selectAllFolders(Context context) {
         ArrayList<String> folderNames = PhotoUtils.getFolders(context);
-        StringBuilder stringBuilder = new StringBuilder();
-
-        for(String folderName : folderNames) {
-            stringBuilder.append(folderName).append(FoldersListPreference.SEPARATOR);
-        }
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(context.getString(R.string.pref_folderstoprocess_key), stringBuilder.toString());
+        editor.putStringSet(context.getString(R.string.pref_folderstoprocess_key), new HashSet<>(folderNames));
         editor.apply();
+
+        return folderNames;
     }
 
     public static void selectAllFoldersOnFirstUse(Context context) {

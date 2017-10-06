@@ -33,10 +33,10 @@ public class SettingsActivity extends PermissionActivity {
 
         SettingsActivity.SHOULD_REFRESH = false;
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.my_settings_toolbar);
+        Toolbar toolbar = findViewById(R.id.my_settings_toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportFragmentManager().beginTransaction().replace(R.id.main_settings_content, new SettingsFragment()).commit();
+        getFragmentManager().beginTransaction().replace(R.id.main_settings_content, new SettingsFragment()).commit();
     }
 
     @Override

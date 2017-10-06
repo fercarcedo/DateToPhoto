@@ -79,7 +79,7 @@
         android:background="#b2607d8b"
         android:visibility="invisible" />
 
-    <com.software.shell.fab.ActionButton
+    <com.scalified.fab.ActionButton
         android:id="@+id/btnProcessSelectedPhotos"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -120,7 +120,7 @@
 
         </android.support.v7.widget.CardView>
 
-    <com.software.shell.fab.ActionButton
+    <com.scalified.fab.ActionButton
         android:id="@+id/fab_speeddial_action2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -162,7 +162,7 @@
 
         </android.support.v7.widget.CardView>
 
-    <com.software.shell.fab.ActionButton
+    <com.scalified.fab.ActionButton
         android:id="@+id/fab_speeddial_action1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

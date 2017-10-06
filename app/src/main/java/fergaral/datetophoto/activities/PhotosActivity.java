@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -37,10 +38,11 @@ import android.widget.Toast;
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.resource.drawable.GlideDrawable;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
-import com.software.shell.fab.ActionButton;
+import com.scalified.fab.ActionButton;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -49,6 +51,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import fergaral.datetophoto.GlideApp;
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.fragments.LoadPhotosFragment;
 import fergaral.datetophoto.fragments.ProgressHeadlessFragment;
@@ -66,6 +69,8 @@ import fergaral.datetophoto.utils.Utils;
  */
 public class PhotosActivity extends PermissionActivity implements LoadPhotosFragment.TaskCallbacks {
 
+    public static final String SEARCH_PHOTOS_KEY = "search_photos";
+    public static final String SELECTED_PATHS_KEY = "selected_paths";
     private static final String SEARCH_PHOTOS_FIRST_USE_KEY = "searchPhotosFirstUse";
     public static final String ACTION_SHARE_KEY = "actionshare";
     private static final String LAST_SELECTED_SPINNER_POSITION_KEY = "lastSelectedSpinnerPos";
@@ -101,7 +106,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photos);
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.tool_bar);
+        Toolbar toolbar = findViewById(R.id.tool_bar);
         setSupportActionBar(toolbar);
 
         if(savedInstanceState == null) {
@@ -110,7 +115,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
             }
         }
 
-        AppCompatTextView noPhotosTv = (AppCompatTextView) findViewById(R.id.tv_nophotos);
+        AppCompatTextView noPhotosTv = findViewById(R.id.tv_nophotos);
 
         if(noPhotosTv != null) {
             Drawable drawable = DrawableCompat.wrap(
@@ -125,7 +130,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         if(savedInstanceState != null)
             lastSelectedSpinnerPosition = savedInstanceState.getInt(LAST_SELECTED_SPINNER_POSITION_KEY, 0);
 
-        foldersSpinner = (AppCompatSpinner) findViewById(R.id.foldersSpinner);
+        foldersSpinner = findViewById(R.id.foldersSpinner);
         //nophotosView = (NoPhotosView) findViewById(R.id.noPhotosView);
 
         if(ContextCompat.checkSelfPermission(this,
@@ -166,9 +171,9 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         });
 
         loadingProgBar = findViewById(R.id.loading_photos_prog_bar);
-        processPhotosBtn = (ActionButton) findViewById(R.id.btnProcessSelectedPhotos);
-        fabSpeedDial1 = (ActionButton) findViewById(R.id.fab_speeddial_action1);
-        fabSpeedDial2 = (ActionButton) findViewById(R.id.fab_speeddial_action2);
+        processPhotosBtn = findViewById(R.id.btnProcessSelectedPhotos);
+        fabSpeedDial1 = findViewById(R.id.fab_speeddial_action1);
+        fabSpeedDial2 = findViewById(R.id.fab_speeddial_action2);
         coverView = findViewById(R.id.coverView);
 
         coverView.setOnClickListener(new View.OnClickListener() {
@@ -179,8 +184,8 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
             }
         });
 
-        cardSpeedDial1 = (CardView) findViewById(R.id.card_fab_speeddial_action1);
-        cardSpeedDial2 = (CardView) findViewById(R.id.card_fab_speeddial_action2);
+        cardSpeedDial1 = findViewById(R.id.card_fab_speeddial_action1);
+        cardSpeedDial2 = findViewById(R.id.card_fab_speeddial_action2);
 
         cardSpeedDial1.setVisibility(View.GONE);
         cardSpeedDial2.setVisibility(View.GONE);
@@ -423,19 +428,19 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
             });
 
             //Cargamos la imagen
-            Glide.with(PhotosActivity.this)
+            GlideApp.with(PhotosActivity.this)
                     .load(new File(images.get(position)))
                     .centerCrop()
-                    .listener(new RequestListener<File, GlideDrawable>() {
+                    .listener(new RequestListener<Drawable>() {
                         @Override
-                        public boolean onException(Exception e, File model, Target<GlideDrawable> target, boolean isFirstResource) {
-                            removeImage(model.getPath());
+                        public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
+                            removeImage(((File)model).getPath());
                             ((PhotosAdapter)photosGrid.getAdapter()).notifyDataSetChanged();
                             return false;
                         }
 
                         @Override
-                        public boolean onResourceReady(GlideDrawable resource, File model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                        public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
                             //At least one photo has been successfully loaded
                             processPhotosBtn.show();
                             return false;
@@ -881,10 +886,10 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
         if(searchPhotos) {
             //Buscamos las fotos sin fechar (es el primer uso)
-            args.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, true);
+            args.putBoolean(SEARCH_PHOTOS_KEY, true);
         }else{
-            args.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, false);
-            args.putStringArrayList(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
+            args.putBoolean(SEARCH_PHOTOS_KEY, false);
+            args.putStringArrayList(SELECTED_PATHS_KEY, selectedPaths);
         }
 
         dialogFragment.setArguments(args);
@@ -895,8 +900,8 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         ProgressDialogFragment dialogFragment = new ProgressDialogFragment();
         Bundle args = new Bundle();
 
-        args.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, false);
-        args.putStringArrayList(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
+        args.putBoolean(SEARCH_PHOTOS_KEY, false);
+        args.putStringArrayList(SELECTED_PATHS_KEY, selectedPaths);
         args.putBoolean(PhotosActivity.ACTION_SHARE_KEY, true);
 
         dialogFragment.setArguments(args);
@@ -917,8 +922,8 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
             Bundle arguments = getArguments();
 
-            if(arguments.containsKey(ProgressActivity.SEARCH_PHOTOS_KEY))
-                searchPhotos = arguments.getBoolean(ProgressActivity.SEARCH_PHOTOS_KEY);
+            if(arguments.containsKey(SEARCH_PHOTOS_KEY))
+                searchPhotos = arguments.getBoolean(SEARCH_PHOTOS_KEY);
 
             if(arguments.containsKey(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY))
                 connectToRunningService = arguments.getBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY);
@@ -928,8 +933,8 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
             selectedPaths = new ArrayList<>();
 
-            if(arguments.containsKey(ProgressActivity.SELECTED_PATHS_KEY)) {
-                selectedPaths = arguments.getStringArrayList(ProgressActivity.SELECTED_PATHS_KEY);
+            if(arguments.containsKey(SELECTED_PATHS_KEY)) {
+                selectedPaths = arguments.getStringArrayList(SELECTED_PATHS_KEY);
                 if(selectedPaths != null)
                     total = selectedPaths.size();
             }
@@ -957,8 +962,8 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
                 Bundle fragmentArgs = new Bundle();
 
-                fragmentArgs.putBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, searchPhotos);
-                fragmentArgs.putStringArrayList(ProgressActivity.SELECTED_PATHS_KEY, selectedPaths);
+                fragmentArgs.putBoolean(SEARCH_PHOTOS_KEY, searchPhotos);
+                fragmentArgs.putStringArrayList(SELECTED_PATHS_KEY, selectedPaths);
                 fragmentArgs.putBoolean(PhotosActivity.ACTION_SHARE_KEY, shareAction);
                 fragmentArgs.putBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY, connectToRunningService);
 

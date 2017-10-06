@@ -118,11 +118,6 @@ public class MyActivity extends AppCompatActivity {
                 return true;
             }
 
-            case R.id.action_diskspaceusage: {
-                startActivityCompat(new Intent(this, DiskSpaceUsageActivity.class));
-                return true;
-            }
-
             case android.R.id.home: {
                 if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
                     finishAfterTransition();

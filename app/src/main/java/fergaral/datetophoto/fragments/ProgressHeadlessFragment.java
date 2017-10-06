@@ -6,13 +6,11 @@ import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
 import fergaral.datetophoto.activities.MyActivity;
 import fergaral.datetophoto.activities.PhotosActivity;
-import fergaral.datetophoto.activities.ProgressActivity;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.utils.MyResultReceiver;
 import fergaral.datetophoto.utils.ProgressListener;
@@ -38,10 +36,10 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
         setRetainInstance(true);
 
         Bundle arguments = getArguments();
-        searchPhotos = arguments.getBoolean(ProgressActivity.SEARCH_PHOTOS_KEY, false);
+        searchPhotos = arguments.getBoolean(PhotosActivity.SEARCH_PHOTOS_KEY, false);
 
-        if(arguments.containsKey(ProgressActivity.SELECTED_PATHS_KEY))
-            selectedPaths = arguments.getStringArrayList(ProgressActivity.SELECTED_PATHS_KEY);
+        if(arguments.containsKey(PhotosActivity.SELECTED_PATHS_KEY))
+            selectedPaths = arguments.getStringArrayList(PhotosActivity.SELECTED_PATHS_KEY);
 
         if(arguments.containsKey(PhotosActivity.ACTION_SHARE_KEY))
             shareAction = arguments.getBoolean(PhotosActivity.ACTION_SHARE_KEY, false);
@@ -49,8 +47,8 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
         if(arguments.containsKey(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY))
             connectToRunningService = arguments.getBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY);
 
-        Log.d("TAG", "containsSearch: " + arguments.containsKey(ProgressActivity.SEARCH_PHOTOS_KEY));
-        Log.d("TAG", "containsSelectedPaths: " + arguments.containsKey(ProgressActivity.SELECTED_PATHS_KEY));
+        Log.d("TAG", "containsSearch: " + arguments.containsKey(PhotosActivity.SEARCH_PHOTOS_KEY));
+        Log.d("TAG", "containsSelectedPaths: " + arguments.containsKey(PhotosActivity.SELECTED_PATHS_KEY));
         Log.d("TAG", "selectedPaths!=null" + (selectedPaths != null));
 
         if(!connectToRunningService) {
