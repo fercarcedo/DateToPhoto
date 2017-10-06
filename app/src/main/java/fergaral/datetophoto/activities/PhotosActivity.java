@@ -58,6 +58,7 @@ import fergaral.datetophoto.utils.AnimationUtils;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.ProgressListener;
 import fergaral.datetophoto.utils.TickedImageView;
+import fergaral.datetophoto.utils.UIUtils;
 import fergaral.datetophoto.utils.Utils;
 
 /**
@@ -227,6 +228,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
         selectedPaths = new ArrayList<>();
         photosGrid = (GridView) findViewById(R.id.photos_grid);
+        photosGrid.setNumColumns(UIUtils.calculateNoOfColumns(photosGrid));
 
         final Intent intent = getIntent();
 

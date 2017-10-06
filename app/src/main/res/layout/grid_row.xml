@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.andexert.library.RippleView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<fergaral.datetophoto.utils.TickedImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/thumb"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    app:rv_type="rectangle">
-
-    <fergaral.datetophoto.utils.TickedImageView
-        android:id="@+id/thumb"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-</com.andexert.library.RippleView>
+    android:clickable="true"
+    android:focusable="true"
+    android:background="?android:attr/selectableItemBackground"/>
