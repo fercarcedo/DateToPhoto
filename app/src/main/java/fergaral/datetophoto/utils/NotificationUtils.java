@@ -1,5 +1,7 @@
 package fergaral.datetophoto.utils;
 
+import android.annotation.TargetApi;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -18,6 +20,7 @@ import fergaral.datetophoto.receivers.ActionCancelReceiver;
  */
 public class NotificationUtils {
 
+    private static final String GENERAL_CHANNEL_ID = "fergaral_datetophoto_channel_general";
     private static final int NOTIFICATION_ID = 1;
 
     private NotificationCompat.Builder mNotifBuilder;
@@ -27,9 +30,12 @@ public class NotificationUtils {
 
     public NotificationUtils(Context context) {
         mContext = context;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            createChannels();
     }
 
-    private void setUpNotification(boolean onGoing, boolean hasActions, String contentText, String tickerText) {
+    public void setUpNotification(boolean onGoing, boolean hasActions, String contentText, String tickerText) {
         Intent resultIntent = new Intent(mContext, PhotosActivity.class);
         PendingIntent resultPendingIntent = PendingIntent.getActivity(
                 mContext,
@@ -37,7 +43,7 @@ public class NotificationUtils {
                 resultIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
 
-        mNotifBuilder = new NotificationCompat.Builder(mContext);
+        mNotifBuilder = new NotificationCompat.Builder(mContext, GENERAL_CHANNEL_ID);
 
         boolean lollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
 
@@ -106,7 +112,7 @@ public class NotificationUtils {
                 resultIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
 
-        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext);
+        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext, GENERAL_CHANNEL_ID);
         notifBuilder.setContentTitle("Date To Photo")
                 .setContentText(text)
                 .setSmallIcon(R.drawable.ic_dtp_transp)
@@ -128,7 +134,7 @@ public class NotificationUtils {
                 resultIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
 
-        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext);
+        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext, GENERAL_CHANNEL_ID);
         notifBuilder.setContentTitle("Date To Photo")
                 .setContentText("Permiso necesario")
                 .setSmallIcon(R.drawable.ic_dtp_transp)
@@ -138,5 +144,17 @@ public class NotificationUtils {
 
         NotificationManager notifManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
         notifManager.notify(NOTIFICATION_ID, notifBuilder.build());
+    }
+
+    @TargetApi(Build.VERSION_CODES.O)
+    private void createChannels() {
+        NotificationChannel generalChannel = new NotificationChannel(GENERAL_CHANNEL_ID,
+                mContext.getString(R.string.channel_general),
+                NotificationManager.IMPORTANCE_LOW);
+
+        NotificationManager notificationManager = (NotificationManager)
+                mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+
+        notificationManager.createNotificationChannel(generalChannel);
     }
 }

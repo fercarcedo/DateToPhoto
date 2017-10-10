@@ -2,7 +2,6 @@ package fergaral.datetophoto.utils;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -27,7 +26,6 @@ import android.os.Environment;
 import android.os.ResultReceiver;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
-import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -71,8 +69,6 @@ public class ProcessPhotos {
     private String tempStr = "";
     private boolean dialogCancelled;
     private boolean cancelledCharger;
-    private NotificationCompat.Builder mNotifBuilder;
-    private NotificationManager mNotifManager;
     private long mNotifStartTime;
     private boolean running;
     private int total, actual;

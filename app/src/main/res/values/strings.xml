@@ -36,4 +36,6 @@
     <string name="activity_progress_title">Progreso</string>
 
     <string name="pref_date_color_key">datecolor</string>
+    <string name="channel_general">Notificaciones generales</string>
+    <string name="cancelling">Cancelando...</string>
 </resources>

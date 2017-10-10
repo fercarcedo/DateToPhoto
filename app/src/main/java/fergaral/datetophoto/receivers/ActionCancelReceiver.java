@@ -11,6 +11,7 @@ import android.support.v4.content.LocalBroadcastManager;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.PhotosActivity;
+import fergaral.datetophoto.utils.NotificationUtils;
 
 /**
  * Created by fer on 10/06/15.
@@ -21,27 +22,10 @@ public class ActionCancelReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        showNotification(context, "Cancelando...", "Cancelando...");
+        String cancelText = context.getString(R.string.cancelling);
+        new NotificationUtils(context).setUpNotification(false, false, cancelText, cancelText);
         Intent broadcastIntent = new Intent(PhotosActivity.INTENT_ACTION);
         broadcastIntent.putExtra("dialogcancelled", true);
         LocalBroadcastManager.getInstance(context).sendBroadcast(broadcastIntent);
-    }
-
-    private void showNotification(Context context, String text, String tickerText) {
-
-        boolean lollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
-
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context)
-                .setContentTitle("Date To Photo")
-                .setContentText(text)
-                .setSmallIcon(R.drawable.ic_dtp_transp)
-                .setTicker(tickerText);
-
-        if(lollipop) {
-            notificationBuilder.setColor(Color.parseColor("#1976D2"));
-        }
-
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
     }
 }
