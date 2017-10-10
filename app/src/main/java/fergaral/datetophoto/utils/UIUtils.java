@@ -12,7 +12,7 @@ public class UIUtils {
     public static int calculateNoOfColumns(View view) {
         float dpWidth = pxToDp(view.getContext(), view.getWidth());
         int scalingFactor = 180;
-        return (int) (dpWidth / scalingFactor);
+        return (int) Math.ceil(dpWidth / scalingFactor);
     }
 
     public static int pxToDp(Context context, int px) {

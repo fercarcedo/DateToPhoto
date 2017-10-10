@@ -82,7 +82,7 @@ public class DetectDateActivity extends AppCompatActivity {
                 TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
 
                 if(textRecognizer.isOperational()) {
-                    //Toast.makeText(this, "Text recognizer operational", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Text recognizer operational", Toast.LENGTH_SHORT).show();
 
                     Frame frame = new Frame.Builder()
                             .setBitmap(bitmap)
@@ -106,6 +106,8 @@ public class DetectDateActivity extends AppCompatActivity {
 
                     if(selectedPhotoIv != null)
                         selectedPhotoIv.setImageBitmap(bitmap);
+
+                    Toast.makeText(this, String.valueOf(textBlocks.size()), Toast.LENGTH_SHORT).show();
 
                     for(int i = 0; i < textBlocks.size(); i++) {
                         Rect boundingBox = textBlocks.valueAt(i).getBoundingBox();

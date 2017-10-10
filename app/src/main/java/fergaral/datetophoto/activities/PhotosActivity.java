@@ -69,6 +69,9 @@ import fergaral.datetophoto.utils.Utils;
  */
 public class PhotosActivity extends PermissionActivity implements LoadPhotosFragment.TaskCallbacks {
 
+    public static final String INTENT_ACTION = "fergaral.datetophoto.CANCEL_DIALOG_ACTION";
+    public static final String INTENT_QUERY_ACTION = "fergaral.datetophoto.QUERY_SERVICE_ACTION";
+    public static final String INTENT_RECEIVE_ACTION = "fergaral.datetophoto.RECEIVE_SERVICE_ACTION";
     public static final String SEARCH_PHOTOS_KEY = "search_photos";
     public static final String SELECTED_PATHS_KEY = "selected_paths";
     private static final String SEARCH_PHOTOS_FIRST_USE_KEY = "searchPhotosFirstUse";
@@ -232,8 +235,13 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
         });
 
         selectedPaths = new ArrayList<>();
-        photosGrid = (GridView) findViewById(R.id.photos_grid);
-        photosGrid.setNumColumns(UIUtils.calculateNoOfColumns(photosGrid));
+        photosGrid = findViewById(R.id.photos_grid);
+        photosGrid.post(new Runnable() {
+            @Override
+            public void run() {
+                photosGrid.setNumColumns(UIUtils.calculateNoOfColumns(photosGrid));
+            }
+        });
 
         final Intent intent = getIntent();
 
@@ -629,7 +637,7 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
                     .title("Date To Photo " + versionName)
                     .content("")
                     .positiveText("Aceptar")
-                    .iconRes(R.drawable.ic_launcher)
+                    .iconRes(R.mipmap.ic_launcher)
                     .build();
         }
     }

@@ -8,8 +8,6 @@ import android.graphics.Color;
 import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.activities.PhotosActivity;
 import fergaral.datetophoto.activities.StoragePermissionDeniedFloatingActivity;
@@ -43,7 +41,7 @@ public class NotificationUtils {
 
         boolean lollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
 
-        mNotifBuilder.setSmallIcon(lollipop ? R.drawable.ic_dtp_transp : R.drawable.ic_launcher)
+        mNotifBuilder.setSmallIcon(R.drawable.ic_dtp_transp)
                 .setContentTitle("Date To Photo")
                 .setContentText(contentText)
                 .setContentIntent(resultPendingIntent)
@@ -111,7 +109,7 @@ public class NotificationUtils {
         NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext);
         notifBuilder.setContentTitle("Date To Photo")
                 .setContentText(text)
-                .setSmallIcon(lollipop ? R.drawable.ic_dtp_transp : R.drawable.ic_launcher)
+                .setSmallIcon(R.drawable.ic_dtp_transp)
                 .setTicker(text)
                 .setContentIntent(resultPendingIntent)
                 .setAutoCancel(true);
@@ -133,7 +131,7 @@ public class NotificationUtils {
         NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(mContext);
         notifBuilder.setContentTitle("Date To Photo")
                 .setContentText("Permiso necesario")
-                .setSmallIcon(lollipop ? R.drawable.ic_dtp_transp : R.drawable.ic_launcher)
+                .setSmallIcon(R.drawable.ic_dtp_transp)
                 .setTicker("Permiso necesario")
                 .setContentIntent(resultPendingIntent)
                 .setAutoCancel(true);

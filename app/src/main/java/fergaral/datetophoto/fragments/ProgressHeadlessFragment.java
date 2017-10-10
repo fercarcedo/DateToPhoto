@@ -9,7 +9,6 @@ import android.util.Log;
 
 import java.util.ArrayList;
 
-import fergaral.datetophoto.activities.MyActivity;
 import fergaral.datetophoto.activities.PhotosActivity;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.utils.MyResultReceiver;
@@ -61,7 +60,7 @@ public class ProgressHeadlessFragment extends Fragment implements ProgressChange
                 Utils.searchForAlreadyProcessedPhotos(getActivity(), this);
         }else{
             //We need to provide the running service another listener by sending a broadcast
-            Intent intent = new Intent(MyActivity.INTENT_QUERY_ACTION);
+            Intent intent = new Intent(PhotosActivity.INTENT_QUERY_ACTION);
             MyResultReceiver resultReceiver = new MyResultReceiver(new Handler());
             resultReceiver.setReceiver(this);
 

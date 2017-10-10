@@ -8,7 +8,6 @@ import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -30,16 +29,13 @@ import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -48,13 +44,11 @@ import java.util.Calendar;
 import java.util.Date;
 
 import fergaral.datetophoto.R;
-import fergaral.datetophoto.activities.MyActivity;
+import fergaral.datetophoto.activities.PhotosActivity;
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.exif.ExifInterface;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
-import fergaral.datetophoto.receivers.PowerConnectionReceiver;
 import fergaral.datetophoto.utils.NotificationUtils;
-import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.Utils;
 
 public class ProcessPhotosURIService extends IntentService {
@@ -138,7 +132,6 @@ public class ProcessPhotosURIService extends IntentService {
             boolean active = sharedPreferences.getBoolean(getString(R.string.pref_active_key), true);
 
             if (!active) {
-                PowerConnectionReceiver.completeWakefulIntent(intent);
                 return;
             }
         }
@@ -180,7 +173,7 @@ public class ProcessPhotosURIService extends IntentService {
                     }
                 }
             }
-        }, new IntentFilter(MyActivity.INTENT_QUERY_ACTION));
+        }, new IntentFilter(PhotosActivity.INTENT_QUERY_ACTION));
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         showNotif = sharedPreferences.getBoolean(getString(R.string.pref_shownotification_key), true);
@@ -211,7 +204,7 @@ public class ProcessPhotosURIService extends IntentService {
             public void onReceive(Context context, Intent intent) {
                 dialogCancelled = intent.getBooleanExtra("dialogcancelled", false);
             }
-        }, new IntentFilter(MyActivity.INTENT_ACTION));
+        }, new IntentFilter(PhotosActivity.INTENT_ACTION));
 
         if (receiver != null) {
             Bundle bundle = new Bundle();
@@ -483,99 +476,6 @@ public class ProcessPhotosURIService extends IntentService {
         return getCurrentLocalizedDate();
     }
 
-    public void showProgress(float prog) {
-
-        int progress = (int) prog * 100;
-
-        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(this)
-                .setContentTitle("Date To Photo")
-                .setContentText("Procesando tus fotos en un servicio...")
-                .setSmallIcon(R.drawable.ic_launcher)
-                .setProgress(100, progress, true);
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        notificationManager.notify(NOTIFICATION_ID, notifBuilder.build());
-    }
-
-    public void showNotification(String text) {
-        Intent resultIntent = new Intent(this, MyActivity.class);
-        PendingIntent resultPendingIntent = PendingIntent.getActivity(
-                this,
-                0,
-                resultIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-
-        NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.drawable.ic_launcher)
-                .setContentTitle("Date To Photo")
-                .setContentText(text)
-                .setContentIntent(resultPendingIntent);
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        notificationManager.notify(NOTIFICATION_ID, notifBuilder.build());
-    }
-
-    public ArrayList getCameraImages(Context context) {
-        // Set up an array of the Thumbnail Image ID column we want
-        String[] projection = {MediaStore.Images.Media.DATA};
-
-
-        final Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                projection,
-                null,
-                null,
-                null);
-
-        ArrayList<String> result = null;
-
-        if (cursor != null) {
-            result = new ArrayList<String>(cursor.getCount());
-
-
-            if (cursor.moveToFirst()) {
-                final int dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-                do {
-                    final String data = cursor.getString(dataColumn);
-                    Log.i("data :", data);
-                    result.add(data);
-                } while (cursor.moveToNext());
-            }
-            cursor.close();
-
-            //String uri3 = result.get(2);
-
-       /*File imgFile = new File(uri3);
-       if(imgFile.exists()) {
-           Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
-           iv1.setImageBitmap(myBitmap);
-       }*/
-        } else {
-            final Cursor cursor1 = context.getContentResolver().query(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
-                    projection,
-                    null,
-                    null,
-                    null);
-
-            if (cursor1 != null) {
-                result = new ArrayList<String>(cursor1.getCount());
-
-
-                if (cursor1.moveToFirst()) {
-                    final int dataColumn = cursor1.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-                    do {
-                        final String data = cursor1.getString(dataColumn);
-                        Log.i("data :", data);
-                        result.add(data);
-                    } while (cursor1.moveToNext());
-                }
-                cursor1.close();
-            } else {
-                result = null;
-            }
-        }
-        return result;
-    }
-
     public void savePhoto(Bitmap bmp, String basePath, String name) {
         File imageFileFolder = new File(basePath);
 
@@ -643,11 +543,6 @@ public class ProcessPhotosURIService extends IntentService {
             mNotificationUtils.endProgressNotification("El proceso ha finalizado");
 
         running = false;
-
-        if (onBackground) {
-            PowerConnectionReceiver.completeWakefulIntent(intent);
-        }
-
 
         if (receiver != null) {
             Bundle bundle = new Bundle();

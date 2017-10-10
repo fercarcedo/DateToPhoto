@@ -46,7 +46,7 @@ public class DetectAlreadyProcessedPhotosService extends IntentService {
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
                 .setContentTitle("Date To Photo")
-                .setSmallIcon(R.drawable.ic_launcher)
+                .setSmallIcon(R.drawable.ic_dtp_transp)
                 .setContentIntent(PendingIntent.getActivity(
                         this,
                         0,
