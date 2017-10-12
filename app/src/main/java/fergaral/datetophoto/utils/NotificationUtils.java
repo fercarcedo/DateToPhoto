@@ -1,6 +1,7 @@
 package fergaral.datetophoto.utils;
 
 import android.annotation.TargetApi;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -21,7 +22,7 @@ import fergaral.datetophoto.receivers.ActionCancelReceiver;
 public class NotificationUtils {
 
     private static final String GENERAL_CHANNEL_ID = "fergaral_datetophoto_channel_general";
-    private static final int NOTIFICATION_ID = 1;
+    public static final int NOTIFICATION_ID = 1;
 
     private NotificationCompat.Builder mNotifBuilder;
     private NotificationManager mNotifManager;
@@ -35,7 +36,11 @@ public class NotificationUtils {
             createChannels();
     }
 
-    public void setUpNotification(boolean onGoing, boolean hasActions, String contentText, String tickerText) {
+    public Notification setUpNotification(boolean onGoing, boolean hasActions, String contentText, String tickerText) {
+        return setUpNotification(NOTIFICATION_ID, onGoing, hasActions, contentText, tickerText);
+    }
+
+    public Notification setUpNotification(int notificationId, boolean onGoing, boolean hasActions, String contentText, String tickerText) {
         Intent resultIntent = new Intent(mContext, PhotosActivity.class);
         PendingIntent resultPendingIntent = PendingIntent.getActivity(
                 mContext,
@@ -73,11 +78,13 @@ public class NotificationUtils {
         }
 
         mNotifManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
-        mNotifManager.notify(NOTIFICATION_ID, mNotifBuilder.build());
+        Notification notification = mNotifBuilder.build();
+        mNotifManager.notify(notificationId, notification);
+        return notification;
     }
 
-    public void showProgressNotification(String startText) {
-        setUpNotification(true, true, startText, "Procesando fotos...");
+    public Notification showProgressNotification(String startText) {
+        return setUpNotification(true, true, startText, "Procesando fotos...");
     }
 
     public void showSearchingPhotosNotification(String text) {

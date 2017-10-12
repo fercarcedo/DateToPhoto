@@ -1,24 +1,28 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+﻿<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <fergaral.datetophoto.utils.SwitchPreferenceCompat
+    <CheckBoxPreference
+        android:widgetLayout="@layout/switch_preference_layout"
         android:key="@string/pref_overwrite_key"
         android:title="@string/pref_overwrite_title"
         android:summary="@string/pref_overwrite_summary"
         android:defaultValue="true" />
 
-    <fergaral.datetophoto.utils.SwitchPreferenceCompat
+    <CheckBoxPreference
+        android:widgetLayout="@layout/switch_preference_layout"
         android:key="@string/pref_active_key"
         android:title="@string/pref_active_title"
         android:summary="@string/pref_active_summary"
         android:defaultValue="false" />
 
-    <fergaral.datetophoto.utils.SwitchPreferenceCompat
+    <CheckBoxPreference
+        android:widgetLayout="@layout/switch_preference_layout"
         android:key="@string/pref_shownotification_key"
         android:title="@string/pref_shownotification_title"
         android:summary="@string/pref_shownotification_summary"
         android:defaultValue="true" />
 
-    <fergaral.datetophoto.utils.SwitchPreferenceCompat
+    <CheckBoxPreference
+        android:widgetLayout="@layout/switch_preference_layout"
         android:key="@string/pref_keeplargephoto_key"
         android:title="@string/pref_keeplargephoto_title"
         android:summary="@string/pref_keeplargephoto_summary"
