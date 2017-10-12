@@ -236,12 +236,6 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
         selectedPaths = new ArrayList<>();
         photosGrid = findViewById(R.id.photos_grid);
-        photosGrid.post(new Runnable() {
-            @Override
-            public void run() {
-                photosGrid.setNumColumns(UIUtils.calculateNoOfColumns(photosGrid));
-            }
-        });
 
         final Intent intent = getIntent();
 
@@ -308,20 +302,6 @@ public class PhotosActivity extends PermissionActivity implements LoadPhotosFrag
 
             checkSharedPhotos(savedInstanceState, intent);
         }
-
-        photosGrid.post(new Runnable() {
-            @Override
-            public void run() {
-                for(int i = 0; i < photosGrid.getChildCount(); i++) {
-                    if(photosGrid.getChildAt(i) instanceof TickedImageView) {
-                        TickedImageView imageView = (TickedImageView) photosGrid.getChildAt(i);
-                        Toast.makeText(PhotosActivity.this,
-                                String.valueOf(imageView.isChecked()),
-                                Toast.LENGTH_SHORT).show();
-                    }
-                }
-            }
-        });
     }
 
     @Override
