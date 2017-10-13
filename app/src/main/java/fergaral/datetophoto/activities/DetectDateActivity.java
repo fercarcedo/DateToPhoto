@@ -16,6 +16,7 @@ import android.util.SparseArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.vision.Frame;
@@ -28,12 +29,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import fergaral.datetophoto.R;
+import fergaral.datetophoto.tasks.TestDatestampDetectionAlgorithmTask;
 import fergaral.datetophoto.utils.Point;
 import fergaral.datetophoto.utils.RectImageView;
+import fergaral.datetophoto.utils.Utils;
 
-public class DetectDateActivity extends AppCompatActivity {
+public class DetectDateActivity extends AppCompatActivity implements TestDatestampDetectionAlgorithmTask.AlgorithmCallback {
 
     private static final int SELECT_IMAGE_REQUEST = 1;
+
+    private TextView progressTv;
+    private TextView statisticsTv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,7 +52,7 @@ public class DetectDateActivity extends AppCompatActivity {
         if(getSupportActionBar() != null)
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        Button selectPhotoBtn = (Button) findViewById(R.id.select_photo_btn);
+        Button selectPhotoBtn = findViewById(R.id.select_photo_btn);
 
         if(selectPhotoBtn != null)
             selectPhotoBtn.setOnClickListener(new View.OnClickListener() {
@@ -59,6 +65,19 @@ public class DetectDateActivity extends AppCompatActivity {
                     startActivityForResult(Intent.createChooser(intent, "Select photo"), SELECT_IMAGE_REQUEST);
                 }
             });
+
+        Button statisticsBtn = findViewById(R.id.statistics_btn);
+
+        if (statisticsBtn != null)
+            statisticsBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    runStatistics();
+                }
+            });
+
+        progressTv = findViewById(R.id.progress_tv);
+        statisticsTv = findViewById(R.id.statistics_tv);
     }
 
     @Override
@@ -147,5 +166,19 @@ public class DetectDateActivity extends AppCompatActivity {
                     printWriter.close();
             }
         }
+    }
+
+    private void runStatistics() {
+        Utils.testDatestampDetectionAlgorithm(this, this);
+    }
+
+    @Override
+    public void onProgressChanged(int progress) {
+        progressTv.setText(String.valueOf(progress));
+    }
+
+    @Override
+    public void onCompleted(float percentage) {
+        statisticsTv.setText(percentage + "%");
     }
 }

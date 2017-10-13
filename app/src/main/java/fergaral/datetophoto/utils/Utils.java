@@ -3,7 +3,6 @@ package fergaral.datetophoto.utils;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityOptions;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -12,19 +11,14 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.ExifInterface;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
-import android.provider.ContactsContract;
-import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v4.content.CursorLoader;
 import android.util.Log;
@@ -32,8 +26,6 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
 import android.widget.Toast;
-
-import com.twmacinta.util.MD5;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -46,23 +38,18 @@ import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.zip.Adler32;
-import java.util.zip.CheckedInputStream;
-import java.util.zip.Checksum;
 
 import fergaral.datetophoto.R;
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.services.ProcessPhotosService;
 import fergaral.datetophoto.services.ProcessPhotosURIService;
+import fergaral.datetophoto.tasks.SearchForAlreadyProcessedPhotosTask;
+import fergaral.datetophoto.tasks.TestDatestampDetectionAlgorithmTask;
 
 /**
  * Created by Parejúa on 30/03/2015.
@@ -541,59 +528,15 @@ public final class Utils {
         return hashFile(file, "MD5");
     }
 
-    public static void searchForAlreadyProcessedPhotos(final Context context, final ProgressChangedListener listener) {
+    public static void searchForAlreadyProcessedPhotos(Context context, ProgressChangedListener listener) {
         final ArrayList<String> imagesToProcess = new PhotoUtils(context).getCameraImages();
+        new SearchForAlreadyProcessedPhotosTask(listener, imagesToProcess, context).execute();
+    }
 
-        new AsyncTask<Void, Integer, Void>() {
-
-            @Override
-            protected void onPreExecute() {
-                super.onPreExecute();
-                listener.reportTotal(imagesToProcess.size());
-            }
-
-            @Override
-            protected Void doInBackground(Void... params) {
-                SQLiteDatabase db = new DatabaseHelper(context).getWritableDatabase();
-
-                int progress = 0;
-
-                for(String path : imagesToProcess) {
-                    try {
-                        ExifInterface exifInterface = new ExifInterface(path);
-
-                        String makeExif = exifInterface.getAttribute(ExifInterface.TAG_MAKE);
-
-                        if(makeExif != null && makeExif.startsWith("dtp-")) {
-                            ContentValues values = new ContentValues();
-                            values.put(DatabaseHelper.PATH_COLUMN, path);
-
-                            db.insert(DatabaseHelper.TABLE_NAME, null, values);
-                        }
-
-                        progress++;
-                        publishProgress(progress);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                db.close();
-
-                return null;
-            }
-
-            @Override
-            protected void onProgressUpdate(Integer... values) {
-                super.onProgressUpdate(values);
-                listener.onProgressChanged(values[0]);
-            }
-
-            @Override
-            protected void onPostExecute(Void aVoid) {
-                listener.reportEnd(false);
-            }
-        }.execute();
+    public static void testDatestampDetectionAlgorithm(TestDatestampDetectionAlgorithmTask.AlgorithmCallback listener,
+                                                       Context context) {
+        List<String> imagesToProcess = Utils.getImagesToProcess(context, new PhotoUtils(context).getCameraImages());
+        new TestDatestampDetectionAlgorithmTask(listener, imagesToProcess, context).execute();
     }
 
     public static void searchForAlreadyProcessedPhotos(Context context) {

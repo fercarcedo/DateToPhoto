@@ -24,6 +24,27 @@
             android:layout_centerHorizontal="true"
             android:text="Escoger foto" />
 
+        <Button android:id="@+id/statistics_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_above="@+id/select_photo_btn"
+            android:text="Estadísticas" />
+
+        <TextView android:id="@+id/progress_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_above="@+id/statistics_btn"
+            android:text="0%" />
+
+        <TextView android:id="@+id/statistics_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_above="@+id/progress_tv"
+            android:text="0%" />
+
     </RelativeLayout>
 
 </RelativeLayout>
