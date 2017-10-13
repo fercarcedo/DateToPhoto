@@ -58,6 +58,7 @@ import fergaral.datetophoto.fragments.ProgressHeadlessFragment;
 import fergaral.datetophoto.receivers.ActionCancelReceiver;
 import fergaral.datetophoto.services.ProcessPhotosService;
 import fergaral.datetophoto.utils.AnimationUtils;
+import fergaral.datetophoto.utils.FoldersListPreference;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.ProgressListener;
 import fergaral.datetophoto.utils.TickedImageView;

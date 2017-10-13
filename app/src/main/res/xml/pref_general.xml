@@ -28,10 +28,10 @@
         android:summary="@string/pref_keeplargephoto_summary"
         android:defaultValue="true" />
 
-    <MultiSelectListPreference
+    <fergaral.datetophoto.utils.FoldersListPreference
         android:key="@string/pref_folderstoprocess_key"
-        android:summary="Todas"
-        android:title="Carpetas que se procesarán"
+        android:summary="@string/all"
+        android:title="@string/pref_folderstoprocess_title"
         android:entries="@array/pref_folderstoprocess_entries"
         android:entryValues="@array/pref_folderstoprocess_entryvalues"/>
 </PreferenceScreen>

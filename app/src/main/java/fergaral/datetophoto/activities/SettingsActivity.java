@@ -31,7 +31,8 @@ public class SettingsActivity extends PermissionActivity {
 
         setContentView(R.layout.activity_settings);
 
-        SettingsActivity.SHOULD_REFRESH = false;
+        if (savedInstanceState == null)
+            SettingsActivity.SHOULD_REFRESH = false;
 
         Toolbar toolbar = findViewById(R.id.my_settings_toolbar);
         setSupportActionBar(toolbar);
@@ -53,12 +54,6 @@ public class SettingsActivity extends PermissionActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-
-        /*if(!PhotosActivity.IS_PROCESSING && PhotosActivity.SHOULD_REFRESH_GRID) {
-            Intent intent = new Intent(this, PhotosActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(intent);
-        }*/
 
         PhotosActivity.SHOULD_REFRESH_GRID = SettingsActivity.SHOULD_REFRESH;
 

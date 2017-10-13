@@ -95,29 +95,7 @@ public final class Utils {
             return new String[] {""};
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        Set<String> foldersToProcess = prefs.getStringSet(context.getString(R.string.pref_folderstoprocess_key), null);
-
-        if (foldersToProcess == null) {
-            foldersToProcess = new HashSet<>(PhotoUtils.selectAllFolders(context));
-        }
-
-        return foldersToProcess.toArray(new String[foldersToProcess.size()]);
-    }
-
-    public static boolean processSelectedFolder(Context context, String folderName)
-    {
-        if(context == null || folderName == null)
-            return false;
-
-        String[] foldersToProcess = getFoldersToProcess(context);
-
-        for(int i=0; i<foldersToProcess.length; i++)
-        {
-            if(folderName.equals(foldersToProcess[i]))
-                return true;
-        }
-
-        return false;
+        return prefs.getString(context.getString(R.string.pref_folderstoprocess_key), "").split(FoldersListPreference.SEPARATOR);
     }
 
     public static boolean overwritePhotos(Context context)
