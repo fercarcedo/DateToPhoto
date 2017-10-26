@@ -13,10 +13,18 @@ import fergaral.datetophoto.jobs.ProcessPhotosJob;
  */
 
 public class DateToPhoto extends Application {
+
+    private static DateToPhoto instance;
+
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
         JobManager.create(this).addJobCreator(new MyJobCreator());
         ProcessPhotosJob.scheduleNow();
+    }
+
+    public static DateToPhoto getInstance() {
+        return instance;
     }
 }

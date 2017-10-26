@@ -2,9 +2,6 @@ package fergaral.datetophoto.activities;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Environment;
@@ -15,7 +12,6 @@ import android.support.v7.widget.Toolbar;
 import android.util.SparseArray;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,17 +25,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import fergaral.datetophoto.R;
-import fergaral.datetophoto.tasks.TestDatestampDetectionAlgorithmTask;
 import fergaral.datetophoto.utils.Point;
 import fergaral.datetophoto.utils.RectImageView;
 import fergaral.datetophoto.utils.Utils;
 
-public class DetectDateActivity extends AppCompatActivity implements TestDatestampDetectionAlgorithmTask.AlgorithmCallback {
+public class DetectDateActivity extends AppCompatActivity {
 
     private static final int SELECT_IMAGE_REQUEST = 1;
 
-    private TextView progressTv;
-    private TextView statisticsTv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,18 +59,26 @@ public class DetectDateActivity extends AppCompatActivity implements TestDatesta
                 }
             });
 
-        Button statisticsBtn = findViewById(R.id.statistics_btn);
+        Button visionAPIBtn = findViewById(R.id.vision_btn);
 
-        if (statisticsBtn != null)
-            statisticsBtn.setOnClickListener(new View.OnClickListener() {
+        if (visionAPIBtn != null)
+            visionAPIBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    runStatistics();
+                    runVisionAPI();
                 }
             });
 
-        progressTv = findViewById(R.id.progress_tv);
-        statisticsTv = findViewById(R.id.statistics_tv);
+        Button colorBtn = findViewById(R.id.color_btn);
+
+        if (colorBtn != null) {
+            colorBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    runColor();
+                }
+            });
+        }
     }
 
     @Override
@@ -168,17 +169,11 @@ public class DetectDateActivity extends AppCompatActivity implements TestDatesta
         }
     }
 
-    private void runStatistics() {
-        Utils.testDatestampDetectionAlgorithm(this, this);
+    private void runVisionAPI() {
+        Utils.testVisionDatestampDetectionAlgorithm(this);
     }
 
-    @Override
-    public void onProgressChanged(int progress) {
-        progressTv.setText(String.valueOf(progress));
-    }
-
-    @Override
-    public void onCompleted(float percentage) {
-        statisticsTv.setText(percentage + "%");
+    private void runColor() {
+        Utils.testColorDatestampDetectionAlgorithm(this);
     }
 }

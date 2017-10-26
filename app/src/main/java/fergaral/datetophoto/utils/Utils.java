@@ -44,12 +44,15 @@ import java.util.LinkedList;
 import java.util.List;
 
 import fergaral.datetophoto.R;
+import fergaral.datetophoto.algorithms.ColorAPIPhotoProcessedAlgorithm;
+import fergaral.datetophoto.algorithms.PhotoProcessedAlgorithm;
+import fergaral.datetophoto.algorithms.VisionAPIPhotoProcessedAlgorithm;
 import fergaral.datetophoto.db.DatabaseHelper;
 import fergaral.datetophoto.listeners.ProgressChangedListener;
 import fergaral.datetophoto.services.ProcessPhotosService;
 import fergaral.datetophoto.services.ProcessPhotosURIService;
+import fergaral.datetophoto.services.TestDatestampDetectionAlgorithmService;
 import fergaral.datetophoto.tasks.SearchForAlreadyProcessedPhotosTask;
-import fergaral.datetophoto.tasks.TestDatestampDetectionAlgorithmTask;
 
 /**
  * Created by Parejúa on 30/03/2015.
@@ -533,10 +536,18 @@ public final class Utils {
         new SearchForAlreadyProcessedPhotosTask(listener, imagesToProcess, context).execute();
     }
 
-    public static void testDatestampDetectionAlgorithm(TestDatestampDetectionAlgorithmTask.AlgorithmCallback listener,
-                                                       Context context) {
-        List<String> imagesToProcess = Utils.getImagesToProcess(context, new PhotoUtils(context).getCameraImages());
-        new TestDatestampDetectionAlgorithmTask(listener, imagesToProcess, context).execute();
+    public static void testVisionDatestampDetectionAlgorithm(Context context) {
+        testDatestampDetectionAlgorithm(context, new VisionAPIPhotoProcessedAlgorithm());
+    }
+
+    public static void testColorDatestampDetectionAlgorithm(Context context) {
+        testDatestampDetectionAlgorithm(context, new ColorAPIPhotoProcessedAlgorithm());
+    }
+
+    private static void testDatestampDetectionAlgorithm(Context context, PhotoProcessedAlgorithm algorithm) {
+        Intent intent = new Intent(context, TestDatestampDetectionAlgorithmService.class);
+        intent.putExtra(TestDatestampDetectionAlgorithmService.ALGORITHM_KEY, algorithm);
+        context.startService(intent);
     }
 
     public static void searchForAlreadyProcessedPhotos(Context context) {

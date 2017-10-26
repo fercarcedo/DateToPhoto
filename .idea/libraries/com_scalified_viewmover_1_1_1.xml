@@ -1,8 +1,8 @@
 <component name="libraryTable">
   <library name="com.scalified:viewmover-1.1.1">
     <CLASSES>
-      <root url="file://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/viewmover-1.1.1.aar/d6be5c11c3e49518db34db2f5f86d6f9/res" />
-      <root url="jar://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/viewmover-1.1.1.aar/d6be5c11c3e49518db34db2f5f86d6f9/jars/classes.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/viewmover-1.1.1.aar/34847180c7d7aed8af6555dc73b6e19f/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/viewmover-1.1.1.aar/34847180c7d7aed8af6555dc73b6e19f/res" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

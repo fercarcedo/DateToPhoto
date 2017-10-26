@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.List;
 
 import fergaral.datetophoto.db.DatabaseHelper;
-import fergaral.datetophoto.receivers.PhotoRenamedAddedReceiver;
 import fergaral.datetophoto.utils.NotificationUtils;
 import fergaral.datetophoto.utils.PhotoUtils;
 import fergaral.datetophoto.utils.Utils;
@@ -69,7 +68,5 @@ public class DetectAlreadyProcessedPhotosService extends IntentService {
         }
 
         photosDb.close();
-
-        PhotoRenamedAddedReceiver.completeWakefulIntent(intent);
     }
 }

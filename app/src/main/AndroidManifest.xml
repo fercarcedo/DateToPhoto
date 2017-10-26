@@ -56,6 +56,9 @@
         <service
             android:name=".services.CheckPhotosService"
             android:exported="false" />
+        <service
+            android:name=".services.TestDatestampDetectionAlgorithmService"
+            android:exported="false" />
 
         <activity
             android:name=".activities.SettingsActivity"

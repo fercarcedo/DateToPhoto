@@ -24,26 +24,19 @@
             android:layout_centerHorizontal="true"
             android:text="Escoger foto" />
 
-        <Button android:id="@+id/statistics_btn"
+        <Button android:id="@+id/vision_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
-            android:layout_above="@+id/select_photo_btn"
-            android:text="Estadísticas" />
+            android:layout_above="@id/select_photo_btn"
+            android:text="VISION API" />
 
-        <TextView android:id="@+id/progress_tv"
+        <Button android:id="@+id/color_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
-            android:layout_above="@+id/statistics_btn"
-            android:text="0%" />
-
-        <TextView android:id="@+id/statistics_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
-            android:layout_above="@+id/progress_tv"
-            android:text="0%" />
+            android:layout_above="@id/vision_btn"
+            android:text="COLOR" />
 
     </RelativeLayout>
 
