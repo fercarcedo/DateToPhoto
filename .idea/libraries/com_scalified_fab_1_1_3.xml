@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="com.scalified:fab-1.1.3">
+    <CLASSES>
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/fab-1.1.3.aar/d75f33b76231a42d18ed5c54bf9f73ad/res" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/fab-1.1.3.aar/d75f33b76231a42d18ed5c54bf9f73ad/jars/classes.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.scalified/fab/1.1.3/8f426760c297db44f9cdb4fe39aef07fdb72e5d4/fab-1.1.3-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
