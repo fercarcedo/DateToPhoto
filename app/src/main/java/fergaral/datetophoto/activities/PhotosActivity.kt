@@ -122,7 +122,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         folders.add(0, "Todas las fotos")
         foldersSpinner!!.adapter = ArrayAdapter(this, R.layout.spinner_row, folders)
         foldersSpinner!!.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 if (lastSelectedSpinnerPosition != position) {
                     refreshGrid()
                     lastSelectedSpinnerPosition = position
@@ -186,7 +186,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
             //Mostramos un diálogo preguntando si usaron Date To Photo previamente, pero solo si es la primera vez que
             //se abre la app (porque sería un DialogFragment y se mantiene intacto en rotaciones, etc)
             if (savedInstanceState == null) {
-                FirstUseDialogFragment().show(supportFragmentManager, FirstUseDialogFragment::class.java!!.getSimpleName())
+                FirstUseDialogFragment().show(supportFragmentManager, FirstUseDialogFragment::class.java.getSimpleName())
             }
         } else {
             if (!isRefreshing && savedInstanceState != null && savedInstanceState.containsKey(PHOTOS_LIST_KEY)) {
@@ -272,12 +272,12 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         processPhotosBtn!!.hide()
     }
 
-    override fun onPostExecute(imagesToProcess: ArrayList<String>) {
-        mImagesToProcess = imagesToProcess
+    override fun onPostExecute(result: ArrayList<String>) {
+        mImagesToProcess = result
 
         if (!PhotosActivity.IS_PROCESSING) {
             photosGrid!!.visibility = View.VISIBLE
-            photosGrid!!.adapter = PhotosAdapter(imagesToProcess)
+            photosGrid!!.adapter = PhotosAdapter(mImagesToProcess)
         }
 
         //progressActivity.showContent();
@@ -288,9 +288,9 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         hideLoading()
 
         if (!PhotosActivity.IS_PROCESSING) {
-            if (imagesToProcess.size == 0) {
+            if (result.size == 0) {
                 showNoPhotosScreen()
-            } else if (imagesToProcess.size != 0) {
+            } else if (result.size != 0) {
                 // processPhotosBtn.show();
             }
         }
@@ -443,19 +443,9 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         val imageUri = intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as Uri
         val selectedPaths = ArrayList<String>()
 
-        if (imageUri != null) {
-            selectedPaths.add(imageUri.toString())
-            //Lanzamos el servicio de procesar fotos por URI con la foto
-            showProgressDialogShare(selectedPaths)
-            /*//Si podemos encontrar la ruta local de la foto, la añadimos a la BD
-            Intent addPhotoIntent = new Intent(this, RegisterPhotoURIIntoDBService.class);
-
-            ArrayList<Uri> imageUris = new ArrayList<>();
-            imageUris.add(imageUri);
-
-            addPhotoIntent.putExtra(EXTRA_IMAGE_URI, imageUris);
-            startService(addPhotoIntent);*/
-        }
+        selectedPaths.add(imageUri.toString())
+        //Lanzamos el servicio de procesar fotos por URI con la foto
+        showProgressDialogShare(selectedPaths)
     }
 
     private fun handleMultipleImages(intent: Intent) {

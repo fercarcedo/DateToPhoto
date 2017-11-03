@@ -173,20 +173,20 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
         }
     }
 
+    fun parseStoredValue(`val`: CharSequence?): Array<String>? {
+        if (`val` == null)
+            return null
+
+        return if ("" == `val`)
+            null
+        else
+            (`val` as String).split(SEPARATOR.toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
+    }
+
     companion object {
         //Need to make sure the SEPARATOR is unique and weird enough that it doesn't match one of the entries.
         //Not using any fancy symbols because this is interpreted as a regex for splitting strings.
         val SEPARATOR = "OV=I=XseparatorX=I=VO"
-
-        fun parseStoredValue(`val`: CharSequence?): Array<String>? {
-            if (`val` == null)
-                return null
-
-            return if ("" == `val`)
-                null
-            else
-                (`val` as String).split(SEPARATOR.toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
-        }
     }
 }
 

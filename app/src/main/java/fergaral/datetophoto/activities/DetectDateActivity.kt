@@ -104,14 +104,14 @@ class DetectDateActivity : AppCompatActivity() {
 
                     val selectedPhotoIv = findViewById<View>(R.id.selected_photo_iv) as RectImageView
 
-                    selectedPhotoIv?.setImageBitmap(bitmap)
+                    selectedPhotoIv.setImageBitmap(bitmap)
 
                     Toast.makeText(this, textBlocks.size().toString(), Toast.LENGTH_SHORT).show()
 
                     for (i in 0 until textBlocks.size()) {
                         val boundingBox = textBlocks.valueAt(i).boundingBox
 
-                        selectedPhotoIv?.addBoundingBox(boundingBox)
+                        selectedPhotoIv.addBoundingBox(boundingBox)
 
                         printWriter.println("Top left: (" + boundingBox.left + "," + boundingBox.top + ")")
                         printWriter.println("Top right: " + boundingBox.right + "," + boundingBox.top + ")")
