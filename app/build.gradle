@@ -5,7 +5,6 @@ apply plugin: 'kotlin-kapt'
 android {
     compileSdkVersion 27
     buildToolsVersion '27.0.0'
-
     defaultConfig {
         applicationId "fergaral.datetophoto"
         minSdkVersion 14
@@ -15,7 +14,6 @@ android {
     }
     buildTypes {
         release {
-            //runProguard false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -38,7 +36,7 @@ configurations.all {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     // You must install or update the Support Repository through the SDK manager to use this dependency.
     implementation 'com.android.support:appcompat-v7:27.0.0'
     implementation 'com.android.support:support-v4:27.0.0'
@@ -47,7 +45,7 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.3.0'
     kapt 'com.github.bumptech.glide:compiler:4.3.0'
     implementation 'com.evernote:android-job:1.2.0'
-    implementation "com.google.android.gms:play-services-gcm:11.4.2"
+    implementation 'com.google.android.gms:play-services-gcm:11.4.2'
     implementation 'com.scalified:fab:1.1.3'
     implementation 'com.afollestad.material-dialogs:core:0.9.5.0'
     implementation 'com.google.android.gms:play-services-drive:11.4.2'
