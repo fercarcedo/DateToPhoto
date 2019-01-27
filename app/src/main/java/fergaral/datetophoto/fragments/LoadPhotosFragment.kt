@@ -1,12 +1,10 @@
 package fergaral.datetophoto.fragments
 
-import android.app.Activity
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
 import android.os.AsyncTask
 import android.os.Bundle
 import android.os.Environment
-import android.support.v4.app.Fragment
+import androidx.fragment.app.Fragment
 
 import java.io.File
 import java.util.ArrayList
@@ -33,15 +31,14 @@ class LoadPhotosFragment : Fragment() {
         fun onPostExecute(result: ArrayList<String>)
     }
 
-    override fun onAttach(activity: Activity?) {
-        super.onAttach(activity)
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
 
         //La Activity debe implementar TaskCallbacks
         mCallback = activity as TaskCallbacks?
 
-        if (activity != null && mContext == null)
-        //Solo lo asignamos una vez
-            mContext = activity.applicationContext
+        if (activity != null && mContext == null) //Solo lo asignamos una vez
+            mContext = activity!!.applicationContext
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,7 +84,7 @@ class LoadPhotosFragment : Fragment() {
 
                 val elapsedImagProcess = System.currentTimeMillis() - startTimeImagProcess
 
-                s += "getImagesToProcess: " + elapsedImagProcess + "\n"
+                s += "getImagesToProcess: $elapsedImagProcess\n"
 
                 val startTimeWithoutDate = System.currentTimeMillis()
 
@@ -97,7 +94,7 @@ class LoadPhotosFragment : Fragment() {
 
                 val elapedTimeWithoutDate = System.currentTimeMillis() - startTimeWithoutDate
 
-                s += "getPhotosWithoutDate: " + elapedTimeWithoutDate + "\n"
+                s += "getPhotosWithoutDate: $elapedTimeWithoutDate\n"
             } else {
                 val startTimeImagProcess = System.currentTimeMillis()
 
@@ -105,7 +102,7 @@ class LoadPhotosFragment : Fragment() {
 
                 val elapsedImagProcess = System.currentTimeMillis() - startTimeImagProcess
 
-                s += "getImagesToProcess: " + elapsedImagProcess + "\n"
+                s += "getImagesToProcess: $elapsedImagProcess\n"
 
                 val startTimeWithoutDate = System.currentTimeMillis()
 
@@ -115,12 +112,12 @@ class LoadPhotosFragment : Fragment() {
 
                 val elapedTimeWithoutDate = System.currentTimeMillis() - startTimeWithoutDate
 
-                s += "getPhotosWithoutDate: " + elapedTimeWithoutDate + "\n"
+                s += "getPhotosWithoutDate: $elapedTimeWithoutDate\n"
             }
 
             val elapsedTime = System.currentTimeMillis() - startTime
 
-            s += "TOTAL: " + elapsedTime + "\n"
+            s += "TOTAL: $elapsedTime\n"
 
             Utils.write(Environment.getExternalStorageDirectory().path + File.separator + "Download" + File.separator + "dtpload.txt",
                     s)

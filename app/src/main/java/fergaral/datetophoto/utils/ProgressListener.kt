@@ -6,5 +6,5 @@ package fergaral.datetophoto.utils
 interface ProgressListener {
     fun reportTotal(total: Int)
     fun onProgressChanged(progress: Int, actual: Int)
-    fun reportEnd(fromActionShare: Boolean)
+    fun reportEnd(fromActionShare: Boolean, searchPhotos: Boolean = false)
 }

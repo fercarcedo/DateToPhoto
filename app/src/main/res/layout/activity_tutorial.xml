@@ -24,7 +24,7 @@
         android:text="OMITIR"
         android:textColor="@color/fab_material_white" />
 
-    <android.support.v4.view.ViewPager
+    <androidx.viewpager.widget.ViewPager
         android:id="@+id/tutorial_viewpager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

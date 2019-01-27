@@ -7,9 +7,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -26,20 +24,16 @@ import android.os.Environment
 import android.os.ResultReceiver
 import android.preference.PreferenceManager
 import android.provider.MediaStore
-import android.support.v4.content.ContextCompat
-import android.support.v4.content.LocalBroadcastManager
+import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import android.util.Log
 
 import java.io.BufferedWriter
 import java.io.File
-import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.FileWriter
 import java.io.IOException
 import java.io.PrintWriter
-import java.io.RandomAccessFile
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
 import java.util.ArrayList
 import java.util.Calendar
 import java.util.Date
@@ -47,7 +41,6 @@ import java.util.Date
 import fergaral.datetophoto.R
 import fergaral.datetophoto.activities.PhotosActivity
 import fergaral.datetophoto.db.DatabaseHelper
-import fergaral.datetophoto.fragments.MaterialProgressDialogFragment
 
 /**
  * Created by Fer on 06/10/2017.
@@ -145,11 +138,11 @@ class ProcessPhotos {
 
         LocalBroadcastManager.getInstance(context).registerReceiver(object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                val sendIntent = Intent(MaterialProgressDialogFragment.PROGRESS_ACTION_SEND)
-                sendIntent.putExtra(MaterialProgressDialogFragment.PROGRESS_KEY, actual)
+                val sendIntent = Intent(PhotosActivity.PROGRESS_ACTION_SEND)
+                sendIntent.putExtra(PhotosActivity.PROGRESS_KEY, actual)
                 LocalBroadcastManager.getInstance(context).sendBroadcast(sendIntent)
             }
-        }, IntentFilter(MaterialProgressDialogFragment.PROGRESS_ACTION_QUERY))
+        }, IntentFilter(PhotosActivity.PROGRESS_ACTION_QUERY))
 
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         val showNotif = sharedPreferences.getBoolean(context.getString(R.string.pref_shownotification_key), true)

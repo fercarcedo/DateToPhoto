@@ -8,7 +8,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.preference.PreferenceFragment
 import android.preference.PreferenceManager
-import android.support.v4.app.NotificationCompat
+import androidx.core.app.NotificationCompat
 
 import java.util.ArrayList
 import java.util.Arrays

@@ -20,7 +20,7 @@ import android.os.Handler
 import android.os.PowerManager
 import android.preference.PreferenceManager
 import android.provider.MediaStore
-import android.support.v4.content.CursorLoader
+import androidx.loader.content.CursorLoader
 import android.util.Log
 import android.view.Display
 import android.view.Surface

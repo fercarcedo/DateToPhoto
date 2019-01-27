@@ -13,6 +13,7 @@ import android.preference.Preference
 import android.util.AttributeSet
 
 import com.afollestad.materialdialogs.MaterialDialog
+import com.afollestad.materialdialogs.list.listItemsMultiChoice
 
 import java.util.ArrayList
 import java.util.HashSet
@@ -34,9 +35,7 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
     private var mClickedDialogEntryIndices: MutableSet<Int>? = null
 
     init {
-
         mClickedDialogEntryIndices = HashSet()
-
         setFoldersSummary()
     }
 
@@ -49,45 +48,40 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
     override fun showDialog(state: Bundle?) {
         restoreCheckedEntries()
 
-        val builder = MaterialDialog.Builder(context)
+        val dialog = MaterialDialog(context)
                 .title(R.string.pref_folderstoprocess_title)
-                .items(*entries)
-                .positiveText(R.string.accept)
+                .positiveButton(R.string.accept)
 
         val entryValues = entryValues
 
         if (entryValues.size == 1 && entryValues[0] == "nofolders") {
-            builder.build().show()
+            dialog.message(text = entries[0])
+                    .show()
         } else {
-            builder.negativeText(R.string.cancel)
-                    .itemsCallbackMultiChoice(mClickedDialogEntryIndices!!.toTypedArray<Int>()
-                    ) { materialDialog, integers, charSequences ->
-                        onClick(null, DialogInterface.BUTTON_POSITIVE)
-                        materialDialog.dismiss()
+            dialog.negativeButton(R.string.cancel)
+                .listItemsMultiChoice(items = entries.map { it.toString() }) { dialog, indices, items ->
+                    onClick(null, DialogInterface.BUTTON_POSITIVE)
+                    dialog.dismiss()
 
-                        val entryValues = getEntryValues()
-                        if (entryValues != null) {
-                            val value = StringBuffer()
-                            for (i in entryValues.indices) {
-                                if (Utils.containsInteger(i, integers)) {
-                                    value.append(entryValues[i]).append(SEPARATOR)
-                                }
-                            }
-
-                            if (callChangeListener(value)) {
-                                var `val` = value.toString()
-                                if (`val`.length > 0)
-                                    `val` = `val`.substring(0, `val`.length - SEPARATOR.length)
-                                setValue(`val`)
+                    if (entryValues != null) {
+                        val value = StringBuffer()
+                        for (i in entryValues.indices) {
+                            if (Utils.containsInteger(i, indices.toTypedArray())) {
+                                value.append(entryValues[i]).append(SEPARATOR)
                             }
                         }
 
-                        setFoldersSummary()
-
-                        SettingsActivity.SHOULD_REFRESH = true
-
-                        true
-                    }.build().show()
+                        if (callChangeListener(value)) {
+                            var strVal = value.toString()
+                            if (strVal.isNotEmpty())
+                                strVal = strVal.substring(0, strVal.length - SEPARATOR.length)
+                            setValue(strVal)
+                        }
+                    }
+                    setFoldersSummary()
+                    SettingsActivity.SHOULD_REFRESH = true
+                }
+                .show()
         }
     }
 
@@ -99,10 +93,10 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
         val vals = parseStoredValue(value)
         if (vals != null) {
             for (j in vals.indices) {
-                val `val` = vals[j].trim { it <= ' ' }
+                val value = vals[j].trim { it <= ' ' }
                 for (i in entryValues.indices) {
                     val entry = entryValues[i]
-                    if (entry == `val`) {
+                    if (entry == value) {
                         mClickedDialogEntryIndices!!.add(i)
                         break
                     }
@@ -125,10 +119,10 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
             }
 
             if (callChangeListener(value)) {
-                var `val` = value.toString()
-                if (`val`.length > 0)
-                    `val` = `val`.substring(0, `val`.length - SEPARATOR.length)
-                setValue(`val`)
+                var strVal = value.toString()
+                if (strVal.isNotEmpty())
+                    strVal = strVal.substring(0, strVal.length - SEPARATOR.length)
+                setValue(strVal)
             }
         }
     }
@@ -149,10 +143,10 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
             }
 
             if (callChangeListener(value)) {
-                var `val` = value.toString()
-                if (`val`.length > 0)
-                    `val` = `val`.substring(0, `val`.length - SEPARATOR.length)
-                setValue(`val`)
+                var strVal = value.toString()
+                if (strVal.isNotEmpty())
+                    strVal = strVal.substring(0, strVal.length - SEPARATOR.length)
+                setValue(strVal)
             }
         }
 
@@ -173,14 +167,14 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
         }
     }
 
-    fun parseStoredValue(`val`: CharSequence?): Array<String>? {
-        if (`val` == null)
+    fun parseStoredValue(value: CharSequence?): Array<String>? {
+        if (value == null)
             return null
 
-        return if ("" == `val`)
+        return if ("" == value)
             null
         else
-            (`val` as String).split(SEPARATOR.toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
+            (value as String).split(SEPARATOR.toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
     }
 
     companion object {

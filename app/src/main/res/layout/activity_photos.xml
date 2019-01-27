@@ -1,7 +1,8 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <RelativeLayout
         android:id="@+id/rlphotos"
@@ -11,7 +12,7 @@
         <include android:id="@+id/tool_bar"
             layout="@layout/tool_bar" />
 
-        <android.support.v7.widget.Toolbar
+        <androidx.appcompat.widget.Toolbar
             xmlns:android="http://schemas.android.com/apk/res/android"
             android:id="@+id/spinner_toolbar"
             android:layout_width="match_parent"
@@ -20,12 +21,12 @@
             android:background="?attr/colorPrimary"
             android:elevation="4dp">
 
-            <android.support.v7.widget.AppCompatSpinner
+            <androidx.appcompat.widget.AppCompatSpinner
                 android:id="@+id/foldersSpinner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
 
-        </android.support.v7.widget.Toolbar>
+        </androidx.appcompat.widget.Toolbar>
 
         <RelativeLayout android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -40,7 +41,74 @@
 
             </FrameLayout>
 
-            <android.support.v7.widget.AppCompatTextView android:id="@+id/tv_nophotos"
+            <LinearLayout android:id="@+id/progress_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="invisible"
+                android:layout_centerInParent="true">
+
+                <TextView android:id="@+id/tv_progress_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="Fechando fotos..."
+                    android:layout_marginBottom="10dp" />
+
+                <TextView android:id="@+id/tv_progress_message"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="Tus fotos están siendo fechadas. Relájate y haz otras cosas mientras tanto"
+                    android:visibility="gone"
+                    android:layout_marginBottom="10dp" />
+
+                <ProgressBar android:id="@+id/loading_progress_bar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    tools:progress="45" />
+
+                <FrameLayout android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView android:id="@+id/tv_progress_percentage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="start"
+                        android:text="0%" />
+
+                    <LinearLayout android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end">
+
+                        <TextView android:id="@+id/tv_progress_actual"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0" />
+
+                        <TextView android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="/" />
+
+                        <TextView android:id="@+id/tv_progress_total"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0" />
+
+                    </LinearLayout>
+
+                </FrameLayout>
+
+                <Button android:id="@+id/btn_progress_cancel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:text="@string/cancel" />
+
+            </LinearLayout>
+
+            <androidx.appcompat.widget.AppCompatTextView android:id="@+id/tv_nophotos"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="No hay fotos sin fechar"
@@ -58,17 +126,6 @@
                 android:stretchMode="columnWidth"
                 android:verticalSpacing="2dp"
                 android:numColumns="@integer/photos_grid_num_columns" />
-
-            <!--<com.gc.materialdesign.views.ButtonFlat
-                android:id="@+id/buttonFloat"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"
-                android:layout_alignParentBottom="true"
-                android:layout_marginRight="24dp"
-                android:background="#1E88E5"
-                materialdesign:animate="true"
-                materialdesign:iconDrawable="@drawable/ic_launcher" />-->
 
             </RelativeLayout>
     </RelativeLayout>
@@ -101,7 +158,7 @@
         app:type="DEFAULT"
         android:visibility="invisible"/>
 
-        <android.support.v7.widget.CardView
+        <androidx.cardview.widget.CardView
             android:id="@+id/card_fab_speeddial_action2"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
@@ -119,7 +176,7 @@
                 android:padding="4dp"
                 android:text="Todas las fotos" />
 
-        </android.support.v7.widget.CardView>
+        </androidx.cardview.widget.CardView>
 
     <com.scalified.fab.ActionButton
         android:id="@+id/fab_speeddial_action2"
@@ -143,7 +200,7 @@
         app:type="MINI"
         android:visibility="invisible"/>
 
-        <android.support.v7.widget.CardView
+        <androidx.cardview.widget.CardView
             android:id="@+id/card_fab_speeddial_action1"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
@@ -161,7 +218,7 @@
                 android:padding="4dp"
                 android:text="Fotos seleccionadas" />
 
-        </android.support.v7.widget.CardView>
+        </androidx.cardview.widget.CardView>
 
     <com.scalified.fab.ActionButton
         android:id="@+id/fab_speeddial_action1"

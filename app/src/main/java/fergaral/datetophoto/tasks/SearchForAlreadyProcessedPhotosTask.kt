@@ -68,7 +68,7 @@ class SearchForAlreadyProcessedPhotosTask(private val listener: ProgressChangedL
         listener.onProgressChanged(values[0]!!)
     }
 
-    override fun onPostExecute(aVoid: Void) {
+    override fun onPostExecute(aVoid: Void?) {
         listener.reportEnd(false)
     }
 }

@@ -8,7 +8,7 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.media.ExifInterface
-import android.support.v4.content.ContextCompat
+import androidx.core.content.ContextCompat
 
 import java.io.IOException
 

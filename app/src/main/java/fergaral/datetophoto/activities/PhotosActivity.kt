@@ -10,20 +10,19 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.preference.PreferenceManager
-import android.support.v4.app.DialogFragment
-import android.support.v4.content.ContextCompat
-import android.support.v4.graphics.drawable.DrawableCompat
-import android.support.v7.widget.AppCompatSpinner
-import android.support.v7.widget.AppCompatTextView
-import android.support.v7.widget.CardView
-import android.support.v7.widget.Toolbar
 import android.util.Log
+import androidx.fragment.app.DialogFragment
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
+import androidx.appcompat.widget.AppCompatSpinner
+import androidx.appcompat.widget.AppCompatTextView
+import androidx.cardview.widget.CardView
+import androidx.appcompat.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import com.afollestad.materialdialogs.DialogAction
 import com.afollestad.materialdialogs.MaterialDialog
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -44,7 +43,7 @@ import java.util.*
  * Created by fer on 18/07/15.
  */
 
-class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
+class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, ProgressListener {
 
     private var photosGrid: GridView? = null
     private var selectedPaths: ArrayList<String>? = null
@@ -53,6 +52,14 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
     private var fabSpeedDial1: ActionButton? = null
     private var fabSpeedDial2: ActionButton? = null
     private var coverView: View? = null
+    private lateinit var progressLayout: View
+    private lateinit var tvProgressStatus: TextView
+    private lateinit var loadingProgressBar: ProgressBar
+    private lateinit var tvProgressPercentage: TextView
+    private lateinit var tvProgressActual: TextView
+    private lateinit var tvProgressTotal: TextView
+    private lateinit var btnProgressCancel: Button
+    private lateinit var tvProgressMessage: TextView
     private var cardSpeedDial1: CardView? = null
     private var cardSpeedDial2: CardView? = null
     private var hideNoPhotosTextView: Boolean = false
@@ -69,7 +76,6 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
     private val isNoPhotosScreenShown: Boolean
         get() {
             val noPhotosView = findViewById<View>(R.id.tv_nophotos)
-
             return noPhotosView != null && noPhotosView.visibility == View.VISIBLE
         }
 
@@ -117,7 +123,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
             if (!folder.trim().isEmpty())
                 folders.add(folder)
 
-        Collections.sort(folders) { lhs, rhs -> lhs.toLowerCase().compareTo(rhs.toLowerCase()) }
+        folders.sortWith(Comparator { lhs, rhs -> lhs.toLowerCase().compareTo(rhs.toLowerCase()) })
 
         folders.add(0, "Todas las fotos")
         foldersSpinner!!.adapter = ArrayAdapter(this, R.layout.spinner_row, folders)
@@ -138,6 +144,17 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         processPhotosBtn = findViewById(R.id.btnProcessSelectedPhotos)
         fabSpeedDial1 = findViewById(R.id.fab_speeddial_action1)
         fabSpeedDial2 = findViewById(R.id.fab_speeddial_action2)
+        progressLayout = findViewById(R.id.progress_layout)
+        tvProgressStatus = findViewById(R.id.tv_progress_status)
+        loadingProgressBar = findViewById(R.id.loading_progress_bar)
+        tvProgressPercentage = findViewById(R.id.tv_progress_percentage)
+        tvProgressActual = findViewById(R.id.tv_progress_actual)
+        tvProgressTotal = findViewById(R.id.tv_progress_total)
+        tvProgressMessage = findViewById(R.id.tv_progress_message)
+        btnProgressCancel = findViewById(R.id.btn_progress_cancel)
+        btnProgressCancel.setOnClickListener {
+            cancelProgress()
+        }
         coverView = findViewById(R.id.coverView)
 
         coverView!!.setOnClickListener {
@@ -224,7 +241,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
                     loadPhotosFragment = LoadPhotosFragment()
                     supportFragmentManager
                             .beginTransaction()
-                            .add(loadPhotosFragment, LOAD_PHOTOS_FRAGMENT_TAG)
+                            .add(loadPhotosFragment!!, LOAD_PHOTOS_FRAGMENT_TAG)
                             .commit()
                 } else {
                     //El Fragment ya se creó (pudo ser debido a un cambio de rotación)
@@ -276,6 +293,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         mImagesToProcess = result
 
         if (!PhotosActivity.IS_PROCESSING) {
+            progressLayout.visibility = View.INVISIBLE
             photosGrid!!.visibility = View.VISIBLE
             photosGrid!!.adapter = PhotosAdapter(mImagesToProcess)
         }
@@ -299,9 +317,11 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
     inner class PhotosAdapter(private val images: MutableList<String>?) : BaseAdapter() {
 
         init {
-
             if (images != null && images.size != 0 && isNoPhotosScreenShown) {
-                hideNoPhotosScreen()
+                hideNoPhotosScreen() {
+                    if (shouldShowLoading)
+                        showLoading()
+                }
             }
         }
 
@@ -522,76 +542,59 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
                 e.printStackTrace()
             }
 
-            return MaterialDialog.Builder(activity!!)
-                    .title("Date To Photo " + versionName)
-                    .content("")
-                    .positiveText("Aceptar")
-                    .iconRes(R.mipmap.ic_launcher)
-                    .build()
+            return MaterialDialog(activity!!)
+                    .title(text = "Date To Photo $versionName")
+                    .message(text = "")
+                    .positiveButton(text = "Aceptar")
+                    .icon(R.mipmap.ic_launcher)
         }
     }
 
     class NoPhotosSelectedDialogFragment : DialogFragment() {
         override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-            return MaterialDialog.Builder(activity!!)
-                    .title("No has seleccionado ninguna foto")
-                    .content("Selecciona alguna foto para continuar")
-                    .positiveText("Aceptar")
-                    .build()
+            return MaterialDialog(activity!!)
+                    .title(text = "No has seleccionado ninguna foto")
+                    .message(text = "Selecciona alguna foto para continuar")
+                    .positiveButton(text = "Aceptar")
         }
     }
 
     class FirstUseDialogFragment : DialogFragment() {
         override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-            val usedPreviouslyDialog = MaterialDialog.Builder(activity!!)
-                    .title("¿Has usado antes Date To Photo?")
-                    .content("Selecciona SÍ si en este dispositivo hay alguna foto fechada previamente con esta aplicación. " + "Si no hay, o no recuerdas haber usado Date To Photo, selecciona NO")
-                    .positiveText("Sí")
-                    .negativeText("No")
+            val photosActivity = activity as PhotosActivity
+            return MaterialDialog(photosActivity)
+                    .title(text = "¿Has usado antes Date To Photo?")
+                    .message(text = "Selecciona SÍ si en este dispositivo hay alguna foto fechada previamente con esta aplicación. " + "Si no hay, o no recuerdas haber usado Date To Photo, selecciona NO")
+                    .positiveButton(text = "Sí") {
+                        it.dismiss()
+                        //Indicamos que ya no hay que preguntar más veces si el usuario ha usado antes la aplicación
+                        photosActivity.setSearchPhotosFirstUse(false)
+                        /*
+                            Intent searchPhotosIntent = new Intent(getActivity(), ProgressActivity.class);
+                            searchPhotosIntent.putExtra(ProgressActivity.SEARCH_PHOTOS_KEY, true);*/
+                        photosActivity.showProgressDialog(true)
+                    }
+                    .negativeButton(text = "No") {
+                        it.dismiss()
+
+                        //Indicamos que ya no hay que preguntar más veces si el usuario ha usado antes la aplicación
+                        photosActivity.setSearchPhotosFirstUse(false)
+
+                        photosActivity.createLoadPhotosFragment()
+                        photosActivity.checkSharedPhotos(photosActivity.mSavedInstanceState, photosActivity.mIntent)
+                    }
                     .cancelable(false)
-                    .autoDismiss(true)
-                    .build()
-
-            val photosActivity = activity as PhotosActivity?
-
-            usedPreviouslyDialog.getActionButton(DialogAction.POSITIVE).setOnClickListener {
-                usedPreviouslyDialog.dismiss()
-
-                //Indicamos que ya no hay que preguntar más veces si el usuario ha usado antes la aplicación
-                photosActivity!!.setSearchPhotosFirstUse(false)
-
-                /*
-                    Intent searchPhotosIntent = new Intent(getActivity(), ProgressActivity.class);
-                    searchPhotosIntent.putExtra(ProgressActivity.SEARCH_PHOTOS_KEY, true);*/
-
-                photosActivity.showProgressDialog(true)
-            }
-
-            usedPreviouslyDialog.getActionButton(DialogAction.NEGATIVE).setOnClickListener {
-                usedPreviouslyDialog.dismiss()
-
-                //Indicamos que ya no hay que preguntar más veces si el usuario ha usado antes la aplicación
-                photosActivity!!.setSearchPhotosFirstUse(false)
-
-                photosActivity.createLoadPhotosFragment()
-                photosActivity.checkSharedPhotos(photosActivity.mSavedInstanceState, photosActivity.mIntent)
-            }
-
-            //usedPreviouslyDialog.show();
-
-            return usedPreviouslyDialog
         }
     }
 
     class ShareEndDialogFragment : DialogFragment() {
         override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-            return MaterialDialog.Builder(activity!!)
-                    .title("El proceso ha finalizado")
-                    .content("Como las fotos han sido compartidas desde una aplicación, las fotos con fecha que " +
+            return MaterialDialog(activity!!)
+                    .title(text = "El proceso ha finalizado")
+                    .message(text = "Como las fotos han sido compartidas desde una aplicación, las fotos con fecha que " +
                             "no procedían del dispositivo (por ejemplo, de la nube) se han guardado en la" +
                             " carpeta DateToPhoto.")
-                    .positiveText("De acuerdo")
-                    .show()
+                    .positiveButton(text = "De acuerdo")
         }
     }
 
@@ -603,24 +606,27 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
     }
 
     private fun refreshGrid() {
-        hideNoPhotosScreen()
-        val selectedFolderPosition = foldersSpinner!!.selectedItemPosition
-        val selectedFolder = foldersSpinner!!.selectedItem as String
-        if (loadPhotosFragment != null) {
-            if (selectedFolderPosition == 0)
-                loadPhotosFragment!!.refresh()
-            else
-                loadPhotosFragment!!.load(selectedFolder)
-        } else {
-            createLoadPhotosFragment()
-            if (selectedFolderPosition == 0)
-                loadPhotosFragment!!.refresh()
-            else
-                loadPhotosFragment!!.load(selectedFolder)
-        }
+        hideNoPhotosScreen() {
+            if (shouldShowLoading)
+                showLoading()
+            val selectedFolderPosition = foldersSpinner!!.selectedItemPosition
+            val selectedFolder = foldersSpinner!!.selectedItem as String
+            if (loadPhotosFragment != null) {
+                if (selectedFolderPosition == 0)
+                    loadPhotosFragment!!.refresh()
+                else
+                    loadPhotosFragment!!.load(selectedFolder)
+            } else {
+                createLoadPhotosFragment()
+                if (selectedFolderPosition == 0)
+                    loadPhotosFragment!!.refresh()
+                else
+                    loadPhotosFragment!!.load(selectedFolder)
+            }
 
-        PhotosActivity.SHOULD_REFRESH_GRID = false
-        hideNoPhotosTextView = true
+            PhotosActivity.SHOULD_REFRESH_GRID = false
+            hideNoPhotosTextView = true
+        }
     }
 
     private fun checkSharedPhotos(savedInstanceState: Bundle?, intent: Intent?) {
@@ -671,15 +677,15 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         clickFabSpeedDial1()
     }
 
-    override fun onSaveInstanceState(outState: Bundle?) {
+    override fun onSaveInstanceState(outState: Bundle) {
         if (mImagesToProcess != null)
-            outState!!.putStringArrayList(PHOTOS_LIST_KEY, mImagesToProcess
+            outState.putStringArrayList(PHOTOS_LIST_KEY, mImagesToProcess
             )
 
         if (selectedPaths != null)
-            outState!!.putStringArrayList(SELECTED_PHOTOS_KEY, selectedPaths)
+            outState.putStringArrayList(SELECTED_PHOTOS_KEY, selectedPaths)
 
-        outState!!.putBoolean(FAB_PRESSED_KEY, wasFABPressed)
+        outState.putBoolean(FAB_PRESSED_KEY, wasFABPressed)
 
         if (loadingProgBar != null)
             outState.putBoolean(IS_REFRESHING_KEY, loadingProgBar!!.visibility == View.VISIBLE)
@@ -692,40 +698,41 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
     fun createLoadPhotosFragment() {
         //Iniciamos la AsyncTask (en el Headless Fragment)
         loadPhotosFragment = supportFragmentManager
-                .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG) as LoadPhotosFragment
+                .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG) as LoadPhotosFragment?
 
         if (loadPhotosFragment == null) {
             //Todavía no hemos creado el Fragment. Lo creamos e iniciamos la AsyncTask
             loadPhotosFragment = LoadPhotosFragment()
             supportFragmentManager
                     .beginTransaction()
-                    .add(loadPhotosFragment, LOAD_PHOTOS_FRAGMENT_TAG)
+                    .add(loadPhotosFragment!!, LOAD_PHOTOS_FRAGMENT_TAG)
                     .commit()
         }
     }
 
     private fun showNoPhotosScreen() {
         //nophotosView.setVisibility(View.VISIBLE);
+        progressLayout.visibility = View.INVISIBLE
         photosGrid!!.visibility = View.GONE
 
         //Ocultamos el FAB si se estaba mostrando
         if (processPhotosBtn!!.isShown)
             processPhotosBtn!!.hide()
 
-        val noPhotosTv = findViewById<View>(R.id.tv_nophotos) as TextView
+        val noPhotosTv = findViewById<View>(R.id.tv_nophotos) as TextView?
 
         if (noPhotosTv != null)
             AnimationUtils.showWithCircularReveal(noPhotosTv, this@PhotosActivity)
     }
 
-    private fun hideNoPhotosScreen() {
+    private fun hideNoPhotosScreen(listener: () -> Unit) {
         //nophotosView.setVisibility(View.INVISIBLE);
         photosGrid!!.visibility = View.VISIBLE
 
-        val noPhotosTv = findViewById<View>(R.id.tv_nophotos) as TextView
+        val noPhotosTv = findViewById<View>(R.id.tv_nophotos) as TextView?
 
         if (noPhotosTv != null)
-            AnimationUtils.hideWithCircularReveal(noPhotosTv, this@PhotosActivity)
+            AnimationUtils.hideWithCircularReveal(noPhotosTv, this@PhotosActivity, listener)
     }
 
     private fun hideLoading() {
@@ -736,6 +743,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
     }
 
     fun showLoading() {
+        progressLayout.visibility = View.INVISIBLE
         val noPhotosTv = findViewById<View>(R.id.tv_nophotos) as TextView
         shouldShowLoading = true
 
@@ -751,173 +759,57 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
     }
 
     private fun showProgressDialog(searchPhotos: Boolean, connectToRunningService: Boolean = false) {
-        val dialogFragment = ProgressDialogFragment()
-        val args = Bundle()
-
-        args.putBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY, connectToRunningService)
-
-        if (searchPhotos) {
-            //Buscamos las fotos sin fechar (es el primer uso)
-            args.putBoolean(SEARCH_PHOTOS_KEY, true)
-        } else {
-            args.putBoolean(SEARCH_PHOTOS_KEY, false)
-            args.putStringArrayList(SELECTED_PATHS_KEY, selectedPaths)
-        }
-
-        dialogFragment.arguments = args
-        dialogFragment.show(supportFragmentManager, "progress_dialog")
+        showProgressDialog(searchPhotos, selectedPaths, connectToRunningService, false)
     }
 
     private fun showProgressDialogShare(selectedPaths: ArrayList<String>) {
-        val dialogFragment = ProgressDialogFragment()
-        val args = Bundle()
-
-        args.putBoolean(SEARCH_PHOTOS_KEY, false)
-        args.putStringArrayList(SELECTED_PATHS_KEY, selectedPaths)
-        args.putBoolean(PhotosActivity.ACTION_SHARE_KEY, true)
-
-        dialogFragment.arguments = args
-        dialogFragment.show(supportFragmentManager, "progress_dialog")
+        showProgressDialog(false, selectedPaths, false, true)
     }
 
-    class ProgressDialogFragment : DialogFragment(), ProgressListener {
-        private var mHeadless: ProgressHeadlessFragment? = null
-        private var searchPhotos: Boolean = false
-        private var shareAction: Boolean = false
-        private var connectToRunningService: Boolean = false
-        private var selectedPaths: ArrayList<String>? = null
-
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            isCancelable = false
-
-            val arguments = arguments
-
-            if (arguments!!.containsKey(SEARCH_PHOTOS_KEY))
-                searchPhotos = arguments.getBoolean(SEARCH_PHOTOS_KEY)
-
-            if (arguments.containsKey(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY))
-                connectToRunningService = arguments.getBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY)
-
-            if (searchPhotos) {
-                val context = activity
-                if (context != null) {
-                    total = PhotoUtils(context).cameraImages.size
-                }
-            }
-
-            selectedPaths = ArrayList()
-
-            if (arguments.containsKey(SELECTED_PATHS_KEY)) {
-                selectedPaths = arguments.getStringArrayList(SELECTED_PATHS_KEY)
-                if (selectedPaths != null)
-                    total = selectedPaths!!.size
-            }
-
-            if (arguments.containsKey(PhotosActivity.ACTION_SHARE_KEY))
-                shareAction = arguments.getBoolean(PhotosActivity.ACTION_SHARE_KEY, false)
+    private fun showProgressDialog(searchPhotos: Boolean,
+                                   selectedPaths: ArrayList<String>?,
+                                   connectToRunningService: Boolean = false,
+                                   fromShare: Boolean = true
+    ) {
+        showProgressLayout()
+        tvProgressStatus.text = if (searchPhotos) "Buscando fotos..." else "Fechando fotos..."
+        tvProgressMessage.text = if (searchPhotos) "Estamos buscando fotos ya fechadas en tu dispositivo"
+                                 else "Tus fotos están siendo fechadas. Relájate y haz otras cosas mientras tanto"
+        val total = if (searchPhotos) {
+            PhotoUtils(this).cameraImages.size
+        } else {
+            selectedPaths!!.size
         }
+        reportTotal(total)
+        var headless = supportFragmentManager.findFragmentByTag("headless") as ProgressHeadlessFragment?
+        if (headless == null) {
+            headless = ProgressHeadlessFragment()
 
-        override fun onActivityCreated(savedInstanceState: Bundle?) {
-            super.onActivityCreated(savedInstanceState)
+            supportFragmentManager.beginTransaction()
+                .add(headless, "headless")
+                .commit()
 
-            val fm = fragmentManager
-            mHeadless = fm!!.findFragmentByTag("headless") as ProgressHeadlessFragment?
+            val fragmentArgs = Bundle()
 
-            Log.d("TAG", "mHeadless " + if (mHeadless != null) "!= null" else "null")
+            fragmentArgs.putBoolean(SEARCH_PHOTOS_KEY, searchPhotos)
+            fragmentArgs.putStringArrayList(SELECTED_PATHS_KEY, selectedPaths)
+            fragmentArgs.putBoolean(PhotosActivity.ACTION_SHARE_KEY, fromShare)
+            fragmentArgs.putBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY, connectToRunningService)
 
-            if (mHeadless == null) {
-                mHeadless = ProgressHeadlessFragment()
-
-                fm.beginTransaction()
-                        .add(mHeadless, "headless")
-                        .commit()
-
-                val fragmentArgs = Bundle()
-
-                fragmentArgs.putBoolean(SEARCH_PHOTOS_KEY, searchPhotos)
-                fragmentArgs.putStringArrayList(SELECTED_PATHS_KEY, selectedPaths)
-                fragmentArgs.putBoolean(PhotosActivity.ACTION_SHARE_KEY, shareAction)
-                fragmentArgs.putBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY, connectToRunningService)
-
-                mHeadless!!.arguments = fragmentArgs
-                mHeadless!!.setTargetFragment(this, 0)
-            }
+            headless.arguments = fragmentArgs
         }
+    }
 
-        override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-            val dialog = MaterialDialog.Builder(activity!!)
-                    .title(if (searchPhotos) "Buscando fotos..." else "Fechando fotos...")
-                    .content(if (searchPhotos)
-                        "Estamos buscando fotos ya fechadas en tu dispositivo"
-                    else
-                        "Tus fotos están siendo fechadas. Relájate y haz otras cosas mientras tanto")
-                    .progress(false, total, true)
-                    .build()
-
-            dialog.setProgress(actual)
-
-            if (!searchPhotos) {
-                dialog.setActionButton(DialogAction.NEGATIVE, "Cancelar")
-                dialog.getActionButton(DialogAction.NEGATIVE).setOnClickListener { cancelProgress() }
-            }
-
-            return dialog
-        }
-
-        override fun reportTotal(total: Int) {
-            val dialog = dialog as MaterialDialog
-            dialog.maxProgress = total
-            ProgressDialogFragment.total = total
-        }
-
-        override fun onProgressChanged(progress: Int, actual: Int) {
-            val dialog = dialog as MaterialDialog
-            dialog.setProgress(actual)
-            ProgressDialogFragment.actual = actual
-        }
-
-        override fun reportEnd(fromActionShare: Boolean) {
-            dismissAllowingStateLoss()
-            val photosActivity = activity as PhotosActivity?
-            photosActivity!!.selectedPaths!!.clear()
-
-            if (!searchPhotos) {
-                photosActivity.refreshGrid()
-            } else {
-                val fm = fragmentManager
-
-                val fragment = fm!!.findFragmentByTag("headless")
-
-                if (fragment != null) {
-                    fm.beginTransaction()
-                            .remove(fragment)
-                            .commit()
-                }
-
-                photosActivity.createLoadPhotosFragment()
-                photosActivity.checkSharedPhotos(photosActivity.mSavedInstanceState, photosActivity.mIntent)
-            }
-        }
-
-        private fun cancelProgress() {
-            val dialog = dialog as MaterialDialog
-            dialog.setTitle("Cancelando...")
-            dialog.setContent("")
-            activity!!.sendBroadcast(Intent(activity, ActionCancelReceiver::class.java))
-        }
-
-        companion object {
-            private var total = 100
-            private var actual: Int = 0
-        }
+    private fun showProgressLayout() {
+        photosGrid?.visibility = View.INVISIBLE
+        progressLayout.visibility = View.VISIBLE
     }
 
     private fun setSearchPhotosFirstUse(searchPhotosFirstUse: Boolean) {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val editor = prefs.edit()
-        editor.putBoolean(SEARCH_PHOTOS_FIRST_USE_KEY, searchPhotosFirstUse)
-        editor.apply()
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .edit()
+            .putBoolean(SEARCH_PHOTOS_FIRST_USE_KEY, searchPhotosFirstUse)
+            .apply()
     }
 
     private fun showCoverView() {
@@ -944,10 +836,48 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
 
             val initialRadius = Math.hypot(coverView!!.width.toDouble(), coverView!!.height.toDouble()).toFloat()
 
-            AnimationUtils.hideWithCircularReveal(coverView!!, this, cx, cy, initialRadius)
+            AnimationUtils.hideWithCircularReveal(coverView!!, this, cx, cy, initialRadius) {
+                if (shouldShowLoading)
+                    showLoading()
+            }
         } else {
             coverView!!.visibility = View.INVISIBLE
         }
+    }
+
+    override fun reportTotal(total: Int) {
+        tvProgressTotal.text = total.toString()
+        tvProgressActual.text = "0"
+        tvProgressPercentage.text = "0%"
+    }
+
+    override fun onProgressChanged(progress: Int, actual: Int) {
+        tvProgressActual.text = actual.toString()
+        tvProgressPercentage.text = "$progress%"
+    }
+
+    override fun reportEnd(fromActionShare: Boolean, searchPhotos: Boolean) {
+        selectedPaths?.clear()
+
+        if (!searchPhotos) {
+            refreshGrid()
+        } else {
+            val fragment = supportFragmentManager.findFragmentByTag("headless")
+
+            if (fragment != null) {
+                supportFragmentManager.beginTransaction()
+                    .remove(fragment)
+                    .commit()
+            }
+
+            createLoadPhotosFragment()
+            checkSharedPhotos(mSavedInstanceState, mIntent)
+        }
+    }
+
+    private fun cancelProgress() {
+        tvProgressStatus.setText(R.string.cancelling)
+        sendBroadcast(Intent(this, ActionCancelReceiver::class.java))
     }
 
     companion object {
@@ -958,7 +888,6 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         val ACTION_SHARE_KEY = "actionshare"
         val INTENT_ACTION = "fergaral.datetophoto.CANCEL_DIALOG_ACTION"
         val INTENT_QUERY_ACTION = "fergaral.datetophoto.QUERY_SERVICE_ACTION"
-        val INTENT_RECEIVE_ACTION = "fergaral.datetophoto.RECEIVE_SERVICE_ACTION"
         val SEARCH_PHOTOS_KEY = "search_photos"
         val SELECTED_PATHS_KEY = "selected_paths"
         val SEARCH_PHOTOS_FIRST_USE_KEY = "searchPhotosFirstUse"
@@ -968,5 +897,8 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks {
         val PHOTOS_LIST_KEY = "photosList"
         val SELECTED_PHOTOS_KEY = "selectedPhotos"
         val FAB_PRESSED_KEY = "fabPressed"
+        val PROGRESS_KEY = "fergaral.datetophoto.PROGRESS"
+        val PROGRESS_ACTION_SEND = "fergaral.datetophoto.PROGRESS_ACTION_SEND"
+        val PROGRESS_ACTION_QUERY = "fergaral.datetophoto.PROGRESS_ACTION_QUERY"
     }
 }

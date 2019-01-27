@@ -37,7 +37,7 @@
 
     <string name="pref_date_color_key">datecolor</string>
     <string name="channel_general">Notificaciones generales</string>
-    <string name="cancelling">Cancelando...</string>
+    <string name="cancelling">Cancelando…</string>
     <string name="process_has_finished">El proceso ha finalizado</string>
     <string name="all">Todas</string>
     <string name="pref_folderstoprocess_title">Carpetas que se procesarán</string>

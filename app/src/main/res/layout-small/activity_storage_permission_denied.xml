@@ -36,7 +36,7 @@
             android:layout_marginBottom="10dp"
             android:contentDescription="Fotos"/>
 
-        <android.support.v7.widget.AppCompatButton android:id="@+id/permissionBtn"
+        <androidx.appcompat.widget.AppCompatButton android:id="@+id/permissionBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Conceder"
