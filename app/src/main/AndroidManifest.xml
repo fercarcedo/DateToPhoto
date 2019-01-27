@@ -18,6 +18,10 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
 
+        <meta-data
+            android:name="com.google.firebase.ml.vision.DEPENDENCIES"
+            android:value="ocr" />
+
         <receiver
             android:name=".receivers.BootReceiver"
             android:enabled="true"
