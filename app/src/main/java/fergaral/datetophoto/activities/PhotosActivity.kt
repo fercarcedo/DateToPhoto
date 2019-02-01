@@ -846,12 +846,15 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
     }
 
     override fun reportTotal(total: Int) {
+        loadingProgressBar.max = total
+        loadingProgressBar.progress = 0
         tvProgressTotal.text = total.toString()
         tvProgressActual.text = "0"
         tvProgressPercentage.text = "0%"
     }
 
     override fun onProgressChanged(progress: Int, actual: Int) {
+        loadingProgressBar.progress = progress
         tvProgressActual.text = actual.toString()
         tvProgressPercentage.text = "$progress%"
     }
