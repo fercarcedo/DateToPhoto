@@ -92,7 +92,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
             }
         }
 
-        val noPhotosTv = findViewById<AppCompatTextView>(R.id.tv_nophotos)
+        val noPhotosTv = findViewById<TextView?>(R.id.tv_nophotos)
 
         if (noPhotosTv != null) {
             val drawable = DrawableCompat.wrap(
@@ -530,7 +530,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
     }
 
     private fun showAboutDialog() {
-        AboutDialogFragment().show(supportFragmentManager, AboutDialogFragment::class.java!!.getSimpleName())
+        AboutDialogFragment().show(supportFragmentManager, AboutDialogFragment::class.java.simpleName)
     }
 
     class AboutDialogFragment : DialogFragment() {
@@ -665,7 +665,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         startActivity(progressActivityIntent);*/
         if (selectedPaths == null || selectedPaths!!.size == 0)
             NoPhotosSelectedDialogFragment().show(supportFragmentManager,
-                    NoPhotosSelectedDialogFragment::class.java!!.getSimpleName())
+                    NoPhotosSelectedDialogFragment::class.java.simpleName)
         else
             showProgressDialog(false)
 
@@ -719,7 +719,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         if (processPhotosBtn!!.isShown)
             processPhotosBtn!!.hide()
 
-        val noPhotosTv = findViewById<View>(R.id.tv_nophotos) as TextView?
+        val noPhotosTv = findViewById<TextView?>(R.id.tv_nophotos)
 
         if (noPhotosTv != null)
             AnimationUtils.showWithCircularReveal(noPhotosTv, this@PhotosActivity)
@@ -729,7 +729,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         //nophotosView.setVisibility(View.INVISIBLE);
         photosGrid!!.visibility = View.VISIBLE
 
-        val noPhotosTv = findViewById<View>(R.id.tv_nophotos) as TextView?
+        val noPhotosTv = findViewById<TextView?>(R.id.tv_nophotos)
 
         if (noPhotosTv != null)
             AnimationUtils.hideWithCircularReveal(noPhotosTv, this@PhotosActivity, listener)
@@ -744,7 +744,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
     fun showLoading() {
         progressLayout.visibility = View.INVISIBLE
-        val noPhotosTv = findViewById<View>(R.id.tv_nophotos) as TextView
+        val noPhotosTv = findViewById<TextView?>(R.id.tv_nophotos)
         shouldShowLoading = true
 
         if (loadingProgBar != null) {
