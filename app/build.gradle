@@ -9,8 +9,8 @@ android {
         applicationId "fergaral.datetophoto"
         minSdkVersion 16
         targetSdkVersion 28
-        versionCode 40
-        versionName "0.10.17"
+        versionCode 41
+        versionName "0.10.18"
     }
     buildTypes {
         release {
@@ -41,7 +41,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0-alpha01'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.1.0-alpha01'
+    implementation 'androidx.recyclerview:recyclerview:1.1.0-alpha02'
     implementation 'com.github.bumptech.glide:glide:4.8.0'
     kapt 'com.github.bumptech.glide:compiler:4.8.0'
     implementation 'com.evernote:android-job:1.2.6'
