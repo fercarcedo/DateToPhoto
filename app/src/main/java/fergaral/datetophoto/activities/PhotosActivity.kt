@@ -854,7 +854,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
     }
 
     override fun onProgressChanged(progress: Int, actual: Int) {
-        loadingProgressBar.progress = progress
+        loadingProgressBar.progress = actual
         tvProgressActual.text = actual.toString()
         tvProgressPercentage.text = "$progress%"
     }
