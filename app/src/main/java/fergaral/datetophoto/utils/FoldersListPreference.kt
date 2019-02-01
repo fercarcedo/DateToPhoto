@@ -4,7 +4,6 @@ package fergaral.datetophoto.utils
  * Created by Fer on 13/10/2017.
  */
 
-import android.app.AlertDialog.Builder
 import android.content.Context
 import android.content.DialogInterface
 import android.os.Bundle
@@ -15,7 +14,6 @@ import android.util.AttributeSet
 import com.afollestad.materialdialogs.MaterialDialog
 import com.afollestad.materialdialogs.list.listItemsMultiChoice
 
-import java.util.ArrayList
 import java.util.HashSet
 
 import fergaral.datetophoto.R
@@ -32,7 +30,7 @@ import fergaral.datetophoto.activities.SettingsActivity
  */
 class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : ListPreference(context, attrs) {
 
-    private var mClickedDialogEntryIndices: MutableSet<Int>? = null
+    private var mClickedDialogEntryIndices: MutableSet<Int>
 
     init {
         mClickedDialogEntryIndices = HashSet()
@@ -59,7 +57,7 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
                     .show()
         } else {
             dialog.negativeButton(R.string.cancel)
-                .listItemsMultiChoice(items = entries.map { it.toString() }) { dialog, indices, items ->
+                .listItemsMultiChoice(items = entries.map { it.toString() }, initialSelection = mClickedDialogEntryIndices.toIntArray()) { dialog, indices, items ->
                     onClick(null, DialogInterface.BUTTON_POSITIVE)
                     dialog.dismiss()
 
@@ -97,7 +95,7 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
                 for (i in entryValues.indices) {
                     val entry = entryValues[i]
                     if (entry == value) {
-                        mClickedDialogEntryIndices!!.add(i)
+                        mClickedDialogEntryIndices.add(i)
                         break
                     }
                 }
@@ -113,7 +111,7 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
         if (entryValues != null) {
             val value = StringBuffer()
             for (i in entryValues.indices) {
-                if (mClickedDialogEntryIndices!!.contains(i)) {
+                if (mClickedDialogEntryIndices.contains(i)) {
                     value.append(entryValues[i]).append(SEPARATOR)
                 }
             }
@@ -131,13 +129,13 @@ class FoldersListPreference @JvmOverloads constructor(context: Context, attrs: A
         mClickedDialogEntryIndices = HashSet()
 
         for (i in 0 until entryValues.size)
-            mClickedDialogEntryIndices!!.add(i)
+            mClickedDialogEntryIndices.add(i)
 
         val entryValues = entryValues
         if (entryValues != null) {
             val value = StringBuffer()
             for (i in entryValues.indices) {
-                if (mClickedDialogEntryIndices!!.contains(i)) {
+                if (mClickedDialogEntryIndices.contains(i)) {
                     value.append(entryValues[i]).append(SEPARATOR)
                 }
             }
