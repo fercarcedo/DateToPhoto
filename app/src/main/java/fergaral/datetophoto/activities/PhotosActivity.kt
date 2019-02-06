@@ -261,6 +261,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
                 is ProgressViewModel.ProgressResult.Progress -> {
                     if (it.progress == 0 || progressLayout.visibility != View.VISIBLE) {
                         showProgressLayout()
+                        setProgressStatus(it.searchPhotos)
                         reportTotal(it.total)
                     }
                     onProgressChanged(it.progressPercent, it.progress)
@@ -788,9 +789,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
                                    fromShare: Boolean = true
     ) {
         showProgressLayout()
-        tvProgressStatus.text = if (searchPhotos) "Buscando fotos..." else "Fechando fotos..."
-        tvProgressMessage.text = if (searchPhotos) "Estamos buscando fotos ya fechadas en tu dispositivo"
-                                 else "Tus fotos están siendo fechadas. Relájate y haz otras cosas mientras tanto"
+        setProgressStatus(searchPhotos)
         val total = if (searchPhotos) {
             PhotoUtils(this).cameraImages.size
         } else {
@@ -798,6 +797,12 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         }
         reportTotal(total)
         progressViewModel.start(searchPhotos, selectedPaths, fromShare, connectToRunningService)
+    }
+
+    private fun setProgressStatus(searchPhotos: Boolean) {
+        tvProgressStatus.text = if (searchPhotos) "Buscando fotos..." else "Fechando fotos..."
+        tvProgressMessage.text = if (searchPhotos) "Estamos buscando fotos ya fechadas en tu dispositivo"
+                                 else "Tus fotos están siendo fechadas. Relájate y haz otras cosas mientras tanto"
     }
 
     private fun showProgressLayout() {

@@ -16,7 +16,7 @@ import fergaral.datetophoto.utils.Utils
  */
 class ProgressViewModel : ViewModel(), ProgressChangedListener {
     sealed class ProgressResult {
-        class Progress(val total: Int, val progressPercent: Int = 0, val progress: Int = 0): ProgressResult()
+        class Progress(val searchPhotos: Boolean, val total: Int, val progressPercent: Int = 0, val progress: Int = 0): ProgressResult()
         class Done(val fromActionShare: Boolean, val searchPhotos: Boolean = false) : ProgressResult()
     }
 
@@ -55,13 +55,13 @@ class ProgressViewModel : ViewModel(), ProgressChangedListener {
 
     override fun reportTotal(total: Int) {
         this.total = total
-        progressData.value = ProgressResult.Progress(total = total)
+        progressData.value = ProgressResult.Progress(searchPhotos, total = total)
     }
 
     override fun onProgressChanged(progress: Int) {
         val totalDouble = total.toDouble()
         val progressPercent = progress / totalDouble * 100
-        progressData.value = ProgressResult.Progress(total, progressPercent.toInt(), progress)
+        progressData.value = ProgressResult.Progress(searchPhotos, total, progressPercent.toInt(), progress)
     }
 
     override fun reportEnd(fromActionShare: Boolean) {
