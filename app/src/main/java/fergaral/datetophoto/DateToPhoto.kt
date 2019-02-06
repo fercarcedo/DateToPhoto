@@ -22,8 +22,7 @@ class DateToPhoto : Application() {
     }
 
     companion object {
-
-        var instance: DateToPhoto? = null
+        lateinit var instance: DateToPhoto
             private set
     }
 }

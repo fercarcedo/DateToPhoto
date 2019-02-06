@@ -10,12 +10,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.preference.PreferenceManager
-import android.util.Log
 import androidx.fragment.app.DialogFragment
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.appcompat.widget.AppCompatSpinner
-import androidx.appcompat.widget.AppCompatTextView
 import androidx.cardview.widget.CardView
 import androidx.appcompat.widget.Toolbar
 import android.view.Menu
@@ -23,6 +21,9 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProviders
 import com.afollestad.materialdialogs.MaterialDialog
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -32,7 +33,7 @@ import com.scalified.fab.ActionButton
 import fergaral.datetophoto.GlideApp
 import fergaral.datetophoto.R
 import fergaral.datetophoto.fragments.LoadPhotosFragment
-import fergaral.datetophoto.fragments.ProgressHeadlessFragment
+import fergaral.datetophoto.viewmodels.ProgressViewModel
 import fergaral.datetophoto.receivers.ActionCancelReceiver
 import fergaral.datetophoto.services.ProcessPhotosService
 import fergaral.datetophoto.utils.*
@@ -72,6 +73,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
     private var foldersSpinner: AppCompatSpinner? = null
     private var lastSelectedSpinnerPosition: Int = 0
     var shouldShowLoading: Boolean = false
+    private lateinit var progressViewModel: ProgressViewModel
 
     private val isNoPhotosScreenShown: Boolean
         get() {
@@ -252,6 +254,20 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
             checkSharedPhotos(savedInstanceState, intent)
         }
+
+        progressViewModel = ViewModelProviders.of(this).get(ProgressViewModel::class.java)
+        progressViewModel.progressData.observe(this, Observer {
+            when (it) {
+                is ProgressViewModel.ProgressResult.Progress -> {
+                    if (it.progress == 0 || progressLayout.visibility != View.VISIBLE) {
+                        showProgressLayout()
+                        reportTotal(it.total)
+                    }
+                    onProgressChanged(it.progressPercent, it.progress)
+                }
+                is ProgressViewModel.ProgressResult.Done -> reportEnd(it.fromActionShare, it.searchPhotos)
+            }
+        })
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -781,23 +797,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
             selectedPaths!!.size
         }
         reportTotal(total)
-        var headless = supportFragmentManager.findFragmentByTag("headless") as ProgressHeadlessFragment?
-        if (headless == null) {
-            headless = ProgressHeadlessFragment()
-
-            supportFragmentManager.beginTransaction()
-                .add(headless, "headless")
-                .commit()
-
-            val fragmentArgs = Bundle()
-
-            fragmentArgs.putBoolean(SEARCH_PHOTOS_KEY, searchPhotos)
-            fragmentArgs.putStringArrayList(SELECTED_PATHS_KEY, selectedPaths)
-            fragmentArgs.putBoolean(PhotosActivity.ACTION_SHARE_KEY, fromShare)
-            fragmentArgs.putBoolean(PhotosActivity.CONNECT_TO_RUNNING_SERVICE_KEY, connectToRunningService)
-
-            headless.arguments = fragmentArgs
-        }
+        progressViewModel.start(searchPhotos, selectedPaths, fromShare, connectToRunningService)
     }
 
     private fun showProgressLayout() {
@@ -865,14 +865,6 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         if (!searchPhotos) {
             refreshGrid()
         } else {
-            val fragment = supportFragmentManager.findFragmentByTag("headless")
-
-            if (fragment != null) {
-                supportFragmentManager.beginTransaction()
-                    .remove(fragment)
-                    .commit()
-            }
-
             createLoadPhotosFragment()
             checkSharedPhotos(mSavedInstanceState, mIntent)
         }
