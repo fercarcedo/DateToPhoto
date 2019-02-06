@@ -33,7 +33,7 @@ class SettingsActivity : PermissionActivity() {
         val toolbar = findViewById<Toolbar>(R.id.my_settings_toolbar)
         setSupportActionBar(toolbar)
         supportActionBar!!.setDisplayHomeAsUpEnabled(true)
-        fragmentManager.beginTransaction().replace(R.id.main_settings_content, SettingsFragment()).commit()
+        supportFragmentManager.beginTransaction().replace(R.id.main_settings_content, SettingsFragment()).commit()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -59,7 +59,6 @@ class SettingsActivity : PermissionActivity() {
     }
 
     companion object {
-
         var SHOULD_REFRESH = false
     }
 }

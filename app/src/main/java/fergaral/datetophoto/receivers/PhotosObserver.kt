@@ -29,7 +29,7 @@ class PhotosObserver
         val media = readFromMediaStore(mContext,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
 
-        if (media != null && media.file != null)
+        if (media?.file != null)
             Toast.makeText(mContext, "Detected " + media.file.name, Toast.LENGTH_SHORT).show()
     }
 

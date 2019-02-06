@@ -3,13 +3,10 @@ package fergaral.datetophoto.services
 import android.app.Activity
 import android.app.IntentService
 import android.content.BroadcastReceiver
-import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.SharedPreferences
-import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -32,7 +29,6 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.RandomAccessFile
-import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.util.ArrayList
 import java.util.Calendar
@@ -184,7 +180,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
                     }
                 }
 
-                var myBitmap: Bitmap? = null
+                var myBitmap: Bitmap?
 
                 try {
                     //myBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
@@ -262,7 +258,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
                 }
 
                 var bitmap2: Bitmap? = writeDateOnBitmap(myBitmap, date, orientationAndroidExif)
-
+                @Suppress("UNUSED_VALUE")
                 myBitmap = null
 
                 val file2 = File(Environment.getExternalStorageDirectory().path + "/Date To Photo")
@@ -414,7 +410,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
     fun savePhoto(bmp: Bitmap?, basePath: String, name: String) {
         val imageFileFolder = File(basePath)
 
-        var out: FileOutputStream? = null
+        var out: FileOutputStream?
         val imageFileName = File(imageFileFolder, name)
         try {
             out = FileOutputStream(imageFileName)
@@ -452,18 +448,15 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
         MediaScannerConnection.scanFile(
                 applicationContext,
                 arrayOf(imageFileName), null
-        ) { path, uri -> }
+        ) { _, _ -> }
     }
 
     private fun getStringOfNumber(number: Int): String {
-        var numberString: String? = null
-        if (number < 10) {
-            numberString = "0" + number.toString()
+        return if (number < 10) {
+            "0$number"
         } else {
-            numberString = number.toString()
+            number.toString()
         }
-
-        return numberString
     }
 
     private fun end(intent: Intent?) {
@@ -490,7 +483,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
     }
 
     @Throws(FileNotFoundException::class)
-    fun decodeUri(c: Context, uri: Uri): Bitmap {
+    fun decodeUri(c: Context, uri: Uri): Bitmap? {
         var options = BitmapFactory.Options()
         options.inJustDecodeBounds = true
         BitmapFactory.decodeStream(c.contentResolver.openInputStream(uri), null, options)
@@ -542,15 +535,6 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
     }
 
     fun writeDateOnBitmap(b: Bitmap, text: String, orientation: Int): Bitmap {
-
-        var bitmapConfig: Bitmap.Config? = b.config
-
-        if (bitmapConfig == null) {
-            bitmapConfig = Bitmap.Config.ARGB_8888
-        }
-
-        //b = b.copy(bitmapConfig, true);
-
         val canvas = Canvas(b)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -638,7 +622,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
         private val NOTIFICATION_ID = 1
 
         fun convertToMutable(imgIn: Bitmap): Bitmap {
-            var imgIn = imgIn
+            var bitmap = imgIn
             try {
                 //this is the file going to use temporally to save the bytes.
                 // This file will not be a image, it will store the raw image data.
@@ -650,24 +634,24 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
                 val randomAccessFile = RandomAccessFile(file, "rw")
 
                 // get the width and height of the source bitmap.
-                val width = imgIn.width
-                val height = imgIn.height
-                val type = imgIn.config
+                val width = bitmap.width
+                val height = bitmap.height
+                val type = bitmap.config
 
                 //Copy the byte to the file
                 //Assume source bitmap loaded using options.inPreferredConfig = Config.ARGB_8888;
                 val channel = randomAccessFile.channel
-                val map = channel.map(FileChannel.MapMode.READ_WRITE, 0, (imgIn.rowBytes * height).toLong())
-                imgIn.copyPixelsToBuffer(map)
+                val map = channel.map(FileChannel.MapMode.READ_WRITE, 0, (bitmap.rowBytes * height).toLong())
+                bitmap.copyPixelsToBuffer(map)
                 //recycle the source bitmap, this will be no longer used.
-                imgIn.recycle()
+                bitmap.recycle()
                 System.gc()// try to force the bytes from the imgIn to be released
 
                 //Create a new bitmap to load the bitmap again. Probably the memory will be available.
-                imgIn = Bitmap.createBitmap(width, height, type)
+                bitmap = Bitmap.createBitmap(width, height, type)
                 map.position(0)
                 //load it back from temporary
-                imgIn.copyPixelsFromBuffer(map)
+                bitmap.copyPixelsFromBuffer(map)
                 //close the temporary file and channel , then delete that also
                 channel.close()
                 randomAccessFile.close()
@@ -681,7 +665,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
                 e.printStackTrace()
             }
 
-            return imgIn
+            return bitmap
         }
     }
 }

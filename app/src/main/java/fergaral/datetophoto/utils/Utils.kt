@@ -84,17 +84,9 @@ object Utils {
         if (context == null)
             return arrayOf("")
 
-        var foldersToProcessStr: String?
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val foldersProcessKey = context.getString(R.string.pref_folderstoprocess_key)
-        try {
-            foldersToProcessStr = prefs.getString(foldersProcessKey, "")
-        } catch (e: ClassCastException) {
-            foldersToProcessStr = ""
-            prefs.edit().putString(foldersProcessKey, foldersToProcessStr).apply()
-        }
-
-        return foldersToProcessStr!!.split(FoldersListPreference.SEPARATOR.toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
+        return prefs.getStringSet(foldersProcessKey, mutableSetOf(""))!!.toTypedArray()
     }
 
     fun overwritePhotos(context: Context): Boolean {
@@ -162,7 +154,7 @@ object Utils {
     }
 
     fun getPhotosWithoutDate(context: Context, photos: ArrayList<String>, db: SQLiteDatabase?): ArrayList<String> {
-        var db = db
+        var database = db
         val firstTime = System.currentTimeMillis()
         var s = ""
         var startTime = System.currentTimeMillis()
@@ -171,32 +163,32 @@ object Utils {
         var numPhotos = 0
 
         var elapsedTime = System.currentTimeMillis() - startTime
-        s += "Creating ArrayList: " + elapsedTime + "\n"
+        s += "Creating ArrayList: $elapsedTime\n"
 
         startTime = System.currentTimeMillis()
 
         for (photo in photos) {
-            photosMap.put(photo, false) //false significa que la foto no está fechada
+            photosMap[photo] = false //false significa que la foto no está fechada
         }
 
         elapsedTime = System.currentTimeMillis() - startTime
-        s += "Filling HashMap: " + elapsedTime + "\n"
+        s += "Filling HashMap: $elapsedTime\n"
 
         //Comprobamos si el nombre de la imagen está en la base de datos
-        if (db == null || !db.isOpen)
-            db = DatabaseHelper(context).readableDatabase
+        if (database == null || !database.isOpen)
+            database = DatabaseHelper(context).readableDatabase
 
         val searchQuery = "SELECT " + DatabaseHelper.PATH_COLUMN + " FROM " + DatabaseHelper.TABLE_NAME
 
         startTime = System.currentTimeMillis()
 
-        val cursor = db!!.rawQuery(searchQuery, null)
+        val cursor = database!!.rawQuery(searchQuery, null)
         if (cursor.moveToFirst()) {
             do {
                 val imageName = cursor.getString(0)
 
                 if (photosMap.containsKey(imageName)) {
-                    photosMap.put(imageName, true)
+                    photosMap[imageName] = true
                     numPhotos++
                 }
             } while (cursor.moveToNext())
@@ -204,7 +196,7 @@ object Utils {
         cursor.close()
 
         elapsedTime = System.currentTimeMillis() - startTime
-        s += "Iterating database: " + elapsedTime + "\n"
+        s += "Iterating database: $elapsedTime\n"
 
         startTime = System.currentTimeMillis()
 
@@ -228,7 +220,7 @@ object Utils {
         }
 
         elapsedTime = System.currentTimeMillis() - startTime
-        s += "Final for loop O(n): " + elapsedTime + "\n"
+        s += "Final for loop O(n): $elapsedTime\n"
 
         startTime = System.currentTimeMillis()
 
@@ -254,10 +246,10 @@ object Utils {
         }
 
         elapsedTime = System.currentTimeMillis() - startTime
-        s += "Adding items to ArrayList: " + elapsedTime + "\n"
+        s += "Adding items to ArrayList: $elapsedTime\n"
 
         val elapsedTimeTotal = System.currentTimeMillis() - firstTime
-        s += "TOTAL: " + elapsedTimeTotal
+        s += "TOTAL: $elapsedTimeTotal"
 
         Utils.write(Environment.getExternalStorageDirectory().path + File.separator + "Download"
                 + File.separator + "dtptimephotowithoutdate.txt", s)

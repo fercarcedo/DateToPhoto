@@ -10,7 +10,7 @@ import fergaral.datetophoto.R
 import fergaral.datetophoto.utils.NotificationUtils
 import fergaral.datetophoto.utils.ProcessPhotos
 
-class ProcessPhotosService : IntentService(ProcessPhotosService::class.java!!.getSimpleName()) {
+class ProcessPhotosService : IntentService(ProcessPhotosService::class.java.simpleName) {
 
     override fun onHandleIntent(intent: Intent?) {
         try {

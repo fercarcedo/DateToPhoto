@@ -127,8 +127,6 @@ class NotificationUtils(private val mContext: Context) {
     }
 
     fun showPermissionNotification() {
-        val lollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
-
         val resultIntent = Intent(mContext, StoragePermissionDeniedFloatingActivity::class.java)
         val resultPendingIntent = PendingIntent.getActivity(
                 mContext,

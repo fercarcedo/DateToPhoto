@@ -21,7 +21,7 @@ import fergaral.datetophoto.utils.NotificationUtils
 
 private const val ALGORITHM_KEY = "algorithm"
 
-class TestDatestampDetectionAlgorithmService : IntentService(TestDatestampDetectionAlgorithmService::class.java!!.getSimpleName()) {
+class TestDatestampDetectionAlgorithmService : IntentService(TestDatestampDetectionAlgorithmService::class.java.simpleName) {
 
     override fun onHandleIntent(intent: Intent?) {
         var accuracy = 0f
@@ -33,7 +33,6 @@ class TestDatestampDetectionAlgorithmService : IntentService(TestDatestampDetect
             writeExceptionLog(e)
         } finally {
             stopForeground(true)
-            val notificationText = "Algoritmo finalizado"
             NotificationUtils(this).setUpNotification(2, false, false, accuracy.toString(), accuracy.toString())
         }
     }

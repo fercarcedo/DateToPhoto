@@ -44,7 +44,7 @@ abstract class StoragePermissionBaseActivity : AppCompatActivity() {
         }
     }
 
-    fun requestPermissionClicked(view: View) {
+    fun requestPermissionClicked() {
         if (shouldOpenSettings) {
             //We take the user to the app's details screen
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,

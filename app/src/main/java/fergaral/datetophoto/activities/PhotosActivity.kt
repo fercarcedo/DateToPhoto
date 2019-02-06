@@ -738,7 +738,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         val noPhotosTv = findViewById<TextView?>(R.id.tv_nophotos)
 
         if (noPhotosTv != null)
-            AnimationUtils.showWithCircularReveal(noPhotosTv, this@PhotosActivity)
+            AnimationUtils.showWithCircularReveal(noPhotosTv)
     }
 
     private fun hideNoPhotosScreen(listener: () -> Unit) {
@@ -748,7 +748,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         val noPhotosTv = findViewById<TextView?>(R.id.tv_nophotos)
 
         if (noPhotosTv != null)
-            AnimationUtils.hideWithCircularReveal(noPhotosTv, this@PhotosActivity, listener)
+            AnimationUtils.hideWithCircularReveal(noPhotosTv, listener)
     }
 
     private fun hideLoading() {
@@ -822,7 +822,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
             val finalRadius = Math.hypot(coverView!!.width.toDouble(), coverView!!.height.toDouble()).toFloat()
 
-            AnimationUtils.showWithCircularReveal(coverView!!, this, cx, cy, finalRadius)
+            AnimationUtils.showWithCircularReveal(coverView!!, cx, cy, finalRadius)
         } else {
             coverView!!.visibility = View.VISIBLE
         }
@@ -837,7 +837,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
             val initialRadius = Math.hypot(coverView!!.width.toDouble(), coverView!!.height.toDouble()).toFloat()
 
-            AnimationUtils.hideWithCircularReveal(coverView!!, this, cx, cy, initialRadius) {
+            AnimationUtils.hideWithCircularReveal(coverView!!, cx, cy, initialRadius) {
                 if (shouldShowLoading)
                     showLoading()
             }

@@ -187,7 +187,7 @@ class ProcessPhotos {
             actual = 0
             total = galleryImages.size
 
-            for (receiver in receivers!!) {
+            for (receiver in receivers) {
                 if (receiver != null) {
                     val bundle = Bundle()
                     bundle.putInt("total", total)
@@ -293,12 +293,12 @@ class ProcessPhotos {
                     val timeDecode = System.currentTimeMillis() - startTimeDecode //En ms
                     val timeElapsedDecode = timeDecode / 1000.0
 
-                    printWriter!!.println("decode image: " + timeElapsedDecode)
+                    printWriter!!.println("decode image: $timeElapsedDecode")
 
                     if (myBitmap == null) {
                         actual++
 
-                        for (receiver in receivers!!) {
+                        for (receiver in receivers) {
                             if (receiver != null) {
                                 val bundle = Bundle()
                                 bundle.putInt("progress", actual)
@@ -318,7 +318,7 @@ class ProcessPhotos {
                         continue
                     }
 
-                    tempStr += s + " -> "
+                    tempStr += "$s -> "
 
                     var date = ""
                     var rotation = ExifInterface.ORIENTATION_NORMAL
@@ -411,7 +411,7 @@ class ProcessPhotos {
                     val endTimeSavePhoto = System.currentTimeMillis() - startTimeSavePhoto
                     val elapsedTimeSavePhoto = endTimeSavePhoto / 1000.0
 
-                    printWriter!!.println("save photo: " + elapsedTimeSavePhoto)
+                    printWriter!!.println("save photo: $elapsedTimeSavePhoto")
 
                     bitmap2 = null
 
@@ -425,17 +425,17 @@ class ProcessPhotos {
                     val endTime = System.currentTimeMillis() - startTime
                     val elapsedEndTime = endTime / 1000.0
 
-                    printWriter!!.println("total: " + elapsedEndTime)
+                    printWriter!!.println("total: $elapsedEndTime")
 
                     val retrieveDB = Utils.getPhotosWithoutDate2(context, galleryImages, photosDb)
-                    printWriter!!.println("retrieve db: " + retrieveDB)
+                    printWriter!!.println("retrieve db: $retrieveDB")
 
                     printWriter!!.close()
                 }
 
                 actual++
 
-                for (receiver in receivers!!) {
+                for (receiver in receivers) {
                     if (receiver != null) {
                         val bundle = Bundle()
                         bundle.putInt("progress", actual)
@@ -461,7 +461,7 @@ class ProcessPhotos {
         if (photosDb != null)
             photosDb!!.close()
 
-        for (receiver in receivers!!) {
+        for (receiver in receivers) {
             if (receiver != null) {
                 val bundle = Bundle()
                 bundle.putString("end", "end")
@@ -570,17 +570,8 @@ class ProcessPhotos {
         return Utils.getFormattedDate(Date(imgFile!!.lastModified()))
     }
 
-    fun writeDateOnBitmap(b: Bitmap?, text: String, orientation: Int): Bitmap {
-
-        var bitmapConfig: Bitmap.Config? = b!!.config
-
-        if (bitmapConfig == null) {
-            bitmapConfig = Bitmap.Config.ARGB_8888
-        }
-
-        //b = b.copy(bitmapConfig, true);
-
-        val canvas = Canvas(b)
+    private fun writeDateOnBitmap(b: Bitmap?, text: String, orientation: Int): Bitmap {
+        val canvas = Canvas(b!!)
 
         paint!!.textSize = Math.min(b.width / 20, b.height / 20).toFloat()
 
@@ -716,7 +707,7 @@ class ProcessPhotos {
         shouldRegisterPhoto = true
         val imageFileFolder = File(basePath)
 
-        var out: FileOutputStream? = null
+        var out: FileOutputStream?
         val imageFileName = File(imageFileFolder, name)
         try {
             out = FileOutputStream(imageFileName)
@@ -727,7 +718,7 @@ class ProcessPhotos {
 
             val compressTimeMillis = System.currentTimeMillis() - compressStartTime
             val compressTime = compressTimeMillis / 1000.0
-            printWriter!!.println("compress image: " + compressTime)
+            printWriter!!.println("compress image: $compressTime")
 
             out.flush()
             out.close()
@@ -738,7 +729,7 @@ class ProcessPhotos {
 
             val moveEXIFTimeMillis = System.currentTimeMillis() - moveEXIFStartTime
             val moveEXIFTime = moveEXIFTimeMillis / 1000.0
-            printWriter!!.println("move exif: " + moveEXIFTime)
+            printWriter!!.println("move exif: $moveEXIFTime")
 
             val renameStartTime = System.currentTimeMillis()
 
@@ -764,7 +755,7 @@ class ProcessPhotos {
 
             val renameTimeMillis = System.currentTimeMillis() - renameStartTime
             val renameTime = renameTimeMillis / 1000.0
-            printWriter!!.println("rename: " + renameTime)
+            printWriter!!.println("rename: $renameTime")
 
             val scanPhotoStartTime = System.currentTimeMillis()
 
@@ -772,7 +763,7 @@ class ProcessPhotos {
 
             val scanPhotoTimeMillis = System.currentTimeMillis() - scanPhotoStartTime
             val scanPhotoTime = scanPhotoTimeMillis / 1000.0
-            printWriter!!.println("scan photo: " + scanPhotoTime)
+            printWriter!!.println("scan photo: $scanPhotoTime")
 
             out = null
         } catch (e: Exception) {
@@ -853,7 +844,7 @@ class ProcessPhotos {
             MediaScannerConnection.scanFile(
                     context!!.applicationContext,
                     arrayOf(imageFileName), null
-            ) { path, uri -> }
+            ) { _, _ -> }
         } else {
             context!!.sendBroadcast(Intent(Intent.ACTION_MEDIA_MOUNTED,
                     Uri.parse("file://" + imageFileName)))
@@ -977,11 +968,10 @@ class ProcessPhotos {
     }
 
     companion object {
-        private val LOG = true
-        private val NOTIFICATION_ID = 1
-        val ACTION_CANCEL_CHARGER_DISCONNECTED = "cancel_charger_disconnected"
-        val CANCEL_SERVICE = "cancel"
-        private val RECEIVER_POSITION = 0
-        private val SECOND_RECEIVER_POSITION = 1
+        private const val LOG = true
+        const val ACTION_CANCEL_CHARGER_DISCONNECTED = "cancel_charger_disconnected"
+        const val CANCEL_SERVICE = "cancel"
+        private const val RECEIVER_POSITION = 0
+        private const val SECOND_RECEIVER_POSITION = 1
     }
 }

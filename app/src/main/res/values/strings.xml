@@ -20,16 +20,15 @@
     una copia con fecha, pero más pequeña (la foto se duplicará)</string>
     <string name="title_activity_about">Acerca de</string>
     <string name="title_activity_settings">Opciones</string>
-    <string name="pref_folderstoprocess_key">folderstoprocess</string>
+    <string name="pref_folderstoprocess_key">foldersprocess</string>
     <string name="no_photos">No hay fotos sin fechar</string>
 
     <string-array name="pref_folderstoprocess_entries">
-        <item>No tienes carpetas con fotos</item>
     </string-array>
 
     <string-array name="pref_folderstoprocess_entryvalues">
-        <item>nofolders</item>
     </string-array>
+
     <string name="title_activity_photos">Date To Photo</string>
     <string name="title_activity_disk_space_usage">Espacio en disco</string>
     <string name="title_activity_tutorial">TutorialActivity</string>
@@ -44,4 +43,5 @@
     <string name="accept">Aceptar</string>
     <string name="cancel">Cancelar</string>
     <string name="allfolders">Todas</string>
+    <string name="no_folders">No hay carpetas</string>
 </resources>

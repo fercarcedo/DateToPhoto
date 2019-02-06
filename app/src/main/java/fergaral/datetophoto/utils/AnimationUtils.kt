@@ -13,23 +13,23 @@ import fergaral.datetophoto.activities.PhotosActivity
  */
 object AnimationUtils {
 
-    fun showWithCircularReveal(view: View, activity: PhotosActivity) {
-        circularReveal(view, activity, true)
+    fun showWithCircularReveal(view: View) {
+        circularReveal(view, true)
     }
 
-    fun showWithCircularReveal(view: View, activity: PhotosActivity, cx: Int, cy: Int, radius: Float) {
-        circularReveal(view, activity, true, cx, cy, radius)
+    fun showWithCircularReveal(view: View, cx: Int, cy: Int, radius: Float) {
+        circularReveal(view, true, cx, cy, radius)
     }
 
-    fun hideWithCircularReveal(view: View, activity: PhotosActivity, listener: () -> Unit) {
-        circularReveal(view, activity, false, listener)
+    fun hideWithCircularReveal(view: View, listener: () -> Unit) {
+        circularReveal(view, false, listener)
     }
 
-    fun hideWithCircularReveal(view: View, activity: PhotosActivity, cx: Int, cy: Int, radius: Float, listener: () -> Unit) {
-        circularReveal(view, activity, false, cx, cy, radius, listener)
+    fun hideWithCircularReveal(view: View, cx: Int, cy: Int, radius: Float, listener: () -> Unit) {
+        circularReveal(view, false, cx, cy, radius, listener)
     }
 
-    private fun circularReveal(view: View, activity: PhotosActivity, show: Boolean, listener: (() -> Unit)? = null) {
+    private fun circularReveal(view: View, show: Boolean, listener: (() -> Unit)? = null) {
         //get the center for the clipping circle
         val cx = view.width / 2
         val cy = view.height / 2
@@ -37,10 +37,10 @@ object AnimationUtils {
         //get the final radius for the clipping circle
         val radius = Math.hypot(cx.toDouble(), cy.toDouble()).toFloat()
 
-        circularReveal(view, activity, show, cx, cy, radius, listener)
+        circularReveal(view, show, cx, cy, radius, listener)
     }
 
-    private fun circularReveal(view: View, activity: PhotosActivity, show: Boolean,
+    private fun circularReveal(view: View, show: Boolean,
                                cx: Int, cy: Int, radius: Float, listener: (() -> Unit)? = null) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             if (show) {

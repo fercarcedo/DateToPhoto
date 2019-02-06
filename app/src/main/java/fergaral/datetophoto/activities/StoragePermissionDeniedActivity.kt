@@ -22,8 +22,7 @@ class StoragePermissionDeniedActivity : StoragePermissionBaseActivity() {
         setContentView(R.layout.activity_storage_permission_denied)
 
         val permissionBtn = findViewById<View>(R.id.permissionBtn) as Button
-
-        permissionBtn?.setOnClickListener { v -> requestPermissionClicked(v) }
+        permissionBtn.setOnClickListener { _ -> requestPermissionClicked() }
     }
 
 

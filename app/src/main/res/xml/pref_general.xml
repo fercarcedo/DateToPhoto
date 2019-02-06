@@ -1,4 +1,4 @@
-﻿<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+﻿<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
     <CheckBoxPreference
         android:widgetLayout="@layout/switch_preference_layout"
@@ -29,9 +29,10 @@
         android:defaultValue="true" />
 
     <fergaral.datetophoto.utils.FoldersListPreference
+        android:enabled="false"
         android:key="@string/pref_folderstoprocess_key"
         android:summary="@string/all"
         android:title="@string/pref_folderstoprocess_title"
         android:entries="@array/pref_folderstoprocess_entries"
-        android:entryValues="@array/pref_folderstoprocess_entryvalues"/>
-</PreferenceScreen>
+        android:entryValues="@array/pref_folderstoprocess_entryvalues" />
+</androidx.preference.PreferenceScreen>
