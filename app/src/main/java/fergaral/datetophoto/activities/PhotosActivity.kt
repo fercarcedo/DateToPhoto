@@ -801,6 +801,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
     }
 
     private fun showProgressLayout() {
+        hideLoading()
         photosGrid?.visibility = View.INVISIBLE
         progressLayout.visibility = View.VISIBLE
     }
