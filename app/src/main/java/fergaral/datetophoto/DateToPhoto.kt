@@ -1,12 +1,8 @@
 package fergaral.datetophoto
 
 import android.app.Application
-import android.widget.Toast
 
-import com.evernote.android.job.JobManager
-
-import fergaral.datetophoto.jobs.MyJobCreator
-import fergaral.datetophoto.jobs.ProcessPhotosJob
+import fergaral.datetophoto.works.ProcessPhotosWorker
 
 /**
  * Created by Fer on 07/10/2017.
@@ -17,8 +13,7 @@ class DateToPhoto : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        JobManager.create(this).addJobCreator(MyJobCreator())
-        ProcessPhotosJob.scheduleNow()
+        ProcessPhotosWorker.schedule()
     }
 
     companion object {
