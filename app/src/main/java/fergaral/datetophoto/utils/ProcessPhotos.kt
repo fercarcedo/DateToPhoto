@@ -350,6 +350,7 @@ class ProcessPhotos {
                     //Este método sirve para comprobar la rotación con la segunda interfaz EXIF
                     //testEXIFDate(imgFile.getAbsolutePath());
 
+                    @Suppress("UNUSED_VALUE")
                     myBitmap = null
 
                     /*if(Utils.overwritePhotos(this)) {
@@ -413,6 +414,7 @@ class ProcessPhotos {
 
                     printWriter!!.println("save photo: $elapsedTimeSavePhoto")
 
+                    @Suppress("UNUSED_VALUE")
                     bitmap2 = null
 
                     /* if(Utils.overwritePhotos(this))
@@ -447,6 +449,7 @@ class ProcessPhotos {
                 if (showNotif)
                     mNotificationUtils!!.setNotificationProgress(total, actual)
 
+                @Suppress("UNUSED_VALUE")
                 imgFile = null
             }
         }
@@ -765,6 +768,7 @@ class ProcessPhotos {
             val scanPhotoTime = scanPhotoTimeMillis / 1000.0
             printWriter!!.println("scan photo: $scanPhotoTime")
 
+            @Suppress("UNUSED_VALUE")
             out = null
         } catch (e: Exception) {
             e.printStackTrace()

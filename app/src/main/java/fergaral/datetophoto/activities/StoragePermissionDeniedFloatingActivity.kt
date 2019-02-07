@@ -23,7 +23,7 @@ class StoragePermissionDeniedFloatingActivity : StoragePermissionBaseActivity() 
         setContentView(R.layout.activity_storage_permission_denied_floating)
 
         val permissionBtnView = findViewById<View>(R.id.permissionBtn)
-        permissionBtnView.setOnClickListener { v -> requestPermissionClicked() }
+        permissionBtnView.setOnClickListener { _ -> requestPermissionClicked() }
     }
 
     override fun onPermissionGranted() {

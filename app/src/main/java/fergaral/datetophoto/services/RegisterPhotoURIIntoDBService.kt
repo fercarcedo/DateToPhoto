@@ -16,7 +16,7 @@ import fergaral.datetophoto.utils.Utils
 /**
  * Created by fer on 22/07/15.
  */
-class RegisterPhotoURIIntoDBService : IntentService(RegisterPhotoURIIntoDBService::class.java!!.getSimpleName()) {
+class RegisterPhotoURIIntoDBService : IntentService(RegisterPhotoURIIntoDBService::class.java.simpleName) {
 
     override fun onHandleIntent(intent: Intent?) {
         //Vamos a intentar ver si existe un archivo local asociado con la URI

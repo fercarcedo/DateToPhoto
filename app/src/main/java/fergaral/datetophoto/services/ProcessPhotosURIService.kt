@@ -342,6 +342,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
                     e.printStackTrace()
                 }
 
+                @Suppress("UNUSED_VALUE")
                 bitmap2 = null
 
                 /*if(Utils.overwritePhotos(this))
@@ -367,7 +368,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
                 mNotificationUtils!!.setNotificationProgress(total, actual)
         }
 
-        end(intent)
+        end()
     }
 
     private fun getExifDate(exif: ExifInterface): String {
@@ -418,6 +419,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
             out.flush()
             out.close()
             scanPhoto(imageFileName.toString())
+            @Suppress("UNUSED_VALUE")
             out = null
         } catch (e: Exception) {
             e.printStackTrace()
@@ -459,7 +461,7 @@ class ProcessPhotosURIService : IntentService("ProcessPhotosURIService") {
         }
     }
 
-    private fun end(intent: Intent?) {
+    private fun end() {
         Utils.write(Environment.getExternalStorageDirectory().path + "/Download/datetophotoimages.txt", tempStr)
 
         if (showNotif)

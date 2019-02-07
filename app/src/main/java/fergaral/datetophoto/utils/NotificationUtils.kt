@@ -105,8 +105,6 @@ class NotificationUtils(private val mContext: Context) {
     }
 
     fun showStandAloneNotification(text: String) {
-        val lollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
-
         val resultIntent = Intent(mContext, PhotosActivity::class.java)
         val resultPendingIntent = PendingIntent.getActivity(
                 mContext,
