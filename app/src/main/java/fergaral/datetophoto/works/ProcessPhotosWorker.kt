@@ -8,6 +8,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import fergaral.datetophoto.DateToPhoto
 
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +42,7 @@ class ProcessPhotosWorker(context: Context, params: WorkerParameters) : Worker(c
                 .addTag(TAG)
                 .setConstraints(constraints)
                 .build()
-            WorkManager.getInstance().enqueueUniquePeriodicWork(TAG, ExistingPeriodicWorkPolicy.KEEP, workRequest)
+            WorkManager.getInstance(DateToPhoto.instance).enqueueUniquePeriodicWork(TAG, ExistingPeriodicWorkPolicy.KEEP, workRequest)
         }
     }
 }

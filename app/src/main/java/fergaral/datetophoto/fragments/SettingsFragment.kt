@@ -12,7 +12,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.pref_general, rootKey)
 
-        val listPreference = findPreference(getString(R.string.pref_folderstoprocess_key)) as FoldersListPreference
+        val listPreference = findPreference<FoldersListPreference>(getString(R.string.pref_folderstoprocess_key))
         val folderNames = PhotoUtils.getFolders(activity!!)
         val entries = folderNames.toTypedArray()
 
@@ -20,14 +20,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
             lhs, rhs -> lhs.toLowerCase().compareTo(rhs.toLowerCase())
         }
 
-        listPreference.entries = entries
-        listPreference.entryValues = entries
+        listPreference?.entries = entries
+        listPreference?.entryValues = entries
 
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity)
         val firstUse = sharedPreferences.getBoolean("firstuse", true)
 
         if (firstUse) {
-            listPreference.selectAll()
+            listPreference?.selectAll()
             val editor = sharedPreferences.edit()
             editor.putBoolean("firstuse", false)
             editor.apply()
