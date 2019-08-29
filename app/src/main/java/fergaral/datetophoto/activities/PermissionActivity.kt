@@ -9,7 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 /**
  * Created by fer on 30/05/16.
  */
-abstract class PermissionActivity : AppCompatActivity() {
+abstract class PermissionActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
 

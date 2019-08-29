@@ -6,6 +6,7 @@
     <item android:id="@+id/action_refresh"
         android:title="Recargar"
         app:showAsAction="ifRoom"
+        app:iconTint="?attr/colorOnPrimarySurface"
         android:icon="@drawable/ic_action_refresh_24px" />
 
     <item android:id="@+id/action_settings"

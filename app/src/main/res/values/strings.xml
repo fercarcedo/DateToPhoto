@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="app_name">Date To Photo</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Ajustes</string>
@@ -22,18 +21,12 @@
     <string name="title_activity_settings">Opciones</string>
     <string name="pref_folderstoprocess_key">foldersprocess</string>
     <string name="no_photos">No hay fotos sin fechar</string>
-
-    <string-array name="pref_folderstoprocess_entries">
-    </string-array>
-
-    <string-array name="pref_folderstoprocess_entryvalues">
-    </string-array>
-
+    <string name="skip_button">SKIP</string>
+    <string name="done_button">DONE</string>
     <string name="title_activity_photos">Date To Photo</string>
     <string name="title_activity_disk_space_usage">Espacio en disco</string>
     <string name="title_activity_tutorial">TutorialActivity</string>
     <string name="activity_progress_title">Progreso</string>
-
     <string name="pref_date_color_key">datecolor</string>
     <string name="channel_general">Notificaciones generales</string>
     <string name="cancelling">Cancelando…</string>
@@ -44,4 +37,15 @@
     <string name="cancel">Cancelar</string>
     <string name="allfolders">Todas</string>
     <string name="no_folders">No hay carpetas</string>
+    <string name="pref_theme_key" translatable="false">theme</string>
+    <string name="pref_theme_title">Tema</string>
+    <string name="pref_theme_default">@string/set_by_battery_saver_value</string>
+    <string name="light">Claro</string>
+    <string name="dark">Oscuro</string>
+    <string name="set_by_battery_saver">Establecido por ahorro de batería</string>
+    <string name="system_default">Predeterminado del sistema</string>
+    <string name="light_value" translatable="false">light</string>
+    <string name="dark_value" translatable="false">dark</string>
+    <string name="set_by_battery_saver_value" translatable="false">set_by_battery_saver</string>
+    <string name="system_default_value" translatable="false">system_default</string>
 </resources>
