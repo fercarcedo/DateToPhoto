@@ -1,27 +1,35 @@
-﻿<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+﻿<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <CheckBoxPreference
+    <androidx.preference.ListPreference android:key="@string/pref_theme_key"
+        android:title="@string/pref_theme_title"
+        android:entries="@array/pref_theme_entries"
+        android:entryValues="@array/pref_theme_entryvalues"
+        app:defaultValue="@string/pref_theme_default"
+        app:useSimpleSummaryProvider="true" />
+
+    <androidx.preference.CheckBoxPreference
         android:widgetLayout="@layout/switch_preference_layout"
         android:key="@string/pref_overwrite_key"
         android:title="@string/pref_overwrite_title"
         android:summary="@string/pref_overwrite_summary"
         android:defaultValue="true" />
 
-    <CheckBoxPreference
+    <androidx.preference.CheckBoxPreference
         android:widgetLayout="@layout/switch_preference_layout"
         android:key="@string/pref_active_key"
         android:title="@string/pref_active_title"
         android:summary="@string/pref_active_summary"
         android:defaultValue="false" />
 
-    <CheckBoxPreference
+    <androidx.preference.CheckBoxPreference
         android:widgetLayout="@layout/switch_preference_layout"
         android:key="@string/pref_shownotification_key"
         android:title="@string/pref_shownotification_title"
         android:summary="@string/pref_shownotification_summary"
         android:defaultValue="true" />
 
-    <CheckBoxPreference
+    <androidx.preference.CheckBoxPreference
         android:widgetLayout="@layout/switch_preference_layout"
         android:key="@string/pref_keeplargephoto_key"
         android:title="@string/pref_keeplargephoto_title"

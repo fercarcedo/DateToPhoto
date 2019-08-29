@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorPrimary">
+    android:background="?attr/colorPrimarySurface">
 
     <RelativeLayout android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -34,6 +34,7 @@
             android:src="@drawable/ic_image_black_24dp"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
+            android:tint="?attr/colorOnPrimarySurface"
             android:contentDescription="Fotos"/>
 
         <androidx.appcompat.widget.AppCompatButton android:id="@+id/permissionBtn"
