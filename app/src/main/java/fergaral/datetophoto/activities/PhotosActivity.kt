@@ -21,6 +21,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.core.view.*
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
@@ -189,6 +190,18 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         selectedPaths = ArrayList()
         photosGrid = findViewById(R.id.photos_grid)
 
+        photosGrid?.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+
+        handleWindowInsets()
+        val originalTopMargin = toolbar.marginTop
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { v, insets ->
+            v.updateLayoutParams<ViewGroup.MarginLayoutParams>{
+                topMargin = originalTopMargin + insets.systemWindowInsetTop
+            }
+            insets
+        }
+
         val intent = intent
 
         //Si es la primera vez que se abre la aplicación, buscamos si ya hay fotos sin fechar en el dispositivo
@@ -269,6 +282,30 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
                 is ProgressViewModel.ProgressResult.Done -> reportEnd(it.fromActionShare, it.searchPhotos)
             }
         })
+    }
+
+    private fun handleWindowInsets() {
+        moveViewFromBottom(processPhotosBtn!!)
+        moveViewFromBottom(fabSpeedDial1!!)
+        moveViewFromBottom(cardSpeedDial1!!)
+        moveViewFromBottom(fabSpeedDial2!!)
+        moveViewFromBottom(cardSpeedDial2!!)
+        ViewCompat.setOnApplyWindowInsetsListener(photosGrid!!) { v, insets ->
+            v.updatePadding(bottom = insets.systemWindowInsetBottom)
+            insets
+        }
+    }
+
+    private fun moveViewFromBottom(view: View) {
+        val originalBottomMargin = view.marginBottom
+        val originalRightMargin = view.marginRight
+        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            v.updateLayoutParams<ViewGroup.MarginLayoutParams>{
+                bottomMargin = originalBottomMargin + insets.systemWindowInsetBottom
+                rightMargin = originalRightMargin + insets.systemWindowInsetRight
+            }
+            insets
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
