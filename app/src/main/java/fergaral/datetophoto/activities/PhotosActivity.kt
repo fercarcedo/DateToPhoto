@@ -194,10 +194,12 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
 
         handleWindowInsets()
-        val originalTopMargin = toolbar.marginTop
-        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { v, insets ->
-            v.updateLayoutParams<ViewGroup.MarginLayoutParams>{
-                topMargin = originalTopMargin + insets.systemWindowInsetTop
+        val container = findViewById<View>(R.id.container)
+        ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
+            v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                topMargin = insets.systemWindowInsetTop
+                leftMargin = insets.systemWindowInsetLeft
+                rightMargin = insets.systemWindowInsetRight
             }
             insets
         }
