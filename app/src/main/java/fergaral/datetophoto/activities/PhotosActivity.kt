@@ -75,6 +75,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
     private var lastSelectedSpinnerPosition: Int = 0
     var shouldShowLoading: Boolean = false
     private lateinit var progressViewModel: ProgressViewModel
+    private lateinit var container: View
 
     private val isNoPhotosScreenShown: Boolean
         get() {
@@ -190,18 +191,12 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         selectedPaths = ArrayList()
         photosGrid = findViewById(R.id.photos_grid)
 
-        photosGrid?.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        container = findViewById(R.id.container)
 
-        handleWindowInsets()
-        val container = findViewById<View>(R.id.container)
-        ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
-            v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                topMargin = insets.systemWindowInsetTop
-                leftMargin = insets.systemWindowInsetLeft
-                rightMargin = insets.systemWindowInsetRight
-            }
-            insets
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            photosGrid?.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            handleWindowInsets()
         }
 
         val intent = intent
@@ -292,10 +287,8 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         moveViewFromBottom(cardSpeedDial1!!)
         moveViewFromBottom(fabSpeedDial2!!)
         moveViewFromBottom(cardSpeedDial2!!)
-        ViewCompat.setOnApplyWindowInsetsListener(photosGrid!!) { v, insets ->
-            v.updatePadding(bottom = insets.systemWindowInsetBottom)
-            insets
-        }
+        handlePhotosGridInsets()
+        handleContainerInsets()
     }
 
     private fun moveViewFromBottom(view: View) {
@@ -305,6 +298,24 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
             v.updateLayoutParams<ViewGroup.MarginLayoutParams>{
                 bottomMargin = originalBottomMargin + insets.systemWindowInsetBottom
                 rightMargin = originalRightMargin + insets.systemWindowInsetRight
+            }
+            insets
+        }
+    }
+
+    private fun handlePhotosGridInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(photosGrid!!) { v, insets ->
+            v.updatePadding(bottom = insets.systemWindowInsetBottom)
+            insets
+        }
+    }
+
+    private fun handleContainerInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
+            v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                topMargin = insets.systemWindowInsetTop
+                leftMargin = insets.systemWindowInsetLeft
+                rightMargin = insets.systemWindowInsetRight
             }
             insets
         }
