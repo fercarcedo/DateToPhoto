@@ -722,10 +722,6 @@ class PhotosActivity : PermissionActivity(), ProgressListener {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        if (mImagesToProcess != null)
-            outState.putParcelableArrayList(PHOTOS_LIST_KEY, mImagesToProcess
-            )
-
         if (selectedPaths != null)
             outState.putParcelableArrayList(SELECTED_PHOTOS_KEY, selectedPaths)
 
@@ -914,8 +910,6 @@ class PhotosActivity : PermissionActivity(), ProgressListener {
         val SEARCH_PHOTOS_FIRST_USE_KEY = "searchPhotosFirstUse"
         val LAST_SELECTED_SPINNER_POSITION_KEY = "lastSelectedSpinnerPos"
         val IS_REFRESHING_KEY = "isRefreshing"
-        val LOAD_PHOTOS_FRAGMENT_TAG = "loadPhotosFragment"
-        val PHOTOS_LIST_KEY = "photosList"
         val SELECTED_PHOTOS_KEY = "selectedPhotos"
         val FAB_PRESSED_KEY = "fabPressed"
         val PROGRESS_KEY = "fergaral.datetophoto.PROGRESS"
