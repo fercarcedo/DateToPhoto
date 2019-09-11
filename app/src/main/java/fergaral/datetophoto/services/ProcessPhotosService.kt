@@ -24,8 +24,8 @@ class ProcessPhotosService : IntentService(ProcessPhotosService::class.java.simp
             ProcessPhotos().execute(receiver, onBackground, cameraImages, this)
         } finally {
             stopForeground(true)
-          //  val notificationText = getString(R.string.process_has_finished)
-           // NotificationUtils(this).setUpNotification(2, false, false, notificationText, notificationText)
+            val notificationText = getString(R.string.process_has_finished)
+            NotificationUtils(this).setUpNotification(2, false, false, notificationText, notificationText)
             isRunning = false
         }
     }
