@@ -2,23 +2,21 @@ package fergaral.datetophoto.tasks
 
 import android.content.ContentValues
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
-import android.media.ExifInterface
 import android.os.AsyncTask
+import androidx.exifinterface.media.ExifInterface
 
 import java.io.IOException
 import java.lang.ref.WeakReference
 
 import fergaral.datetophoto.db.DatabaseHelper
 import fergaral.datetophoto.listeners.ProgressChangedListener
+import fergaral.datetophoto.utils.Image
 
 /**
  * Created by Fer on 13/10/2017.
  */
-
-
 class SearchForAlreadyProcessedPhotosTask(private val listener: ProgressChangedListener,
-                                          private val imagesToProcess: List<String>,
+                                          private val imagesToProcess: List<Image>,
                                           context: Context) : AsyncTask<Void, Int, Void>() {
     private val contextRef: WeakReference<Context>
 
@@ -37,21 +35,23 @@ class SearchForAlreadyProcessedPhotosTask(private val listener: ProgressChangedL
 
         var progress = 0
 
-        for (path in imagesToProcess) {
+        for (image in imagesToProcess) {
             try {
-                val exifInterface = ExifInterface(path)
+                context.contentResolver.openInputStream(image.uri)?.let { inputStream ->
+                    val exifInterface = ExifInterface(inputStream)
 
-                val makeExif = exifInterface.getAttribute(ExifInterface.TAG_MAKE)
+                    val makeExif = exifInterface.getAttribute(ExifInterface.TAG_MAKE)
 
-                if (makeExif != null && makeExif.startsWith("dtp-")) {
-                    val values = ContentValues()
-                    values.put(DatabaseHelper.PATH_COLUMN, path)
+                    if (makeExif != null && makeExif.startsWith("dtp-")) {
+                        val values = ContentValues()
+                        values.put(DatabaseHelper.PATH_COLUMN, image.toString())
 
-                    db.insert(DatabaseHelper.TABLE_NAME, null, values)
+                        db.insert(DatabaseHelper.TABLE_NAME, null, values)
+                    }
+
+                    progress++
+                    publishProgress(progress)
                 }
-
-                progress++
-                publishProgress(progress)
             } catch (e: IOException) {
                 e.printStackTrace()
             }
@@ -63,7 +63,7 @@ class SearchForAlreadyProcessedPhotosTask(private val listener: ProgressChangedL
         return null
     }
 
-    protected override fun onProgressUpdate(vararg values: Int?) {
+    override fun onProgressUpdate(vararg values: Int?) {
         super.onProgressUpdate(*values)
         listener.onProgressChanged(values[0]!!)
     }

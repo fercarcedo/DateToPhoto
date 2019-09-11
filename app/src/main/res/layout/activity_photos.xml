@@ -14,12 +14,11 @@
             layout="@layout/tool_bar" />
 
         <androidx.appcompat.widget.Toolbar
-            xmlns:android="http://schemas.android.com/apk/res/android"
             android:id="@+id/spinner_toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:layout_below="@id/tool_bar"
-            android:elevation="4dp">
+            app:elevation="4dp">
 
             <androidx.appcompat.widget.AppCompatSpinner
                 android:id="@+id/foldersSpinner"

@@ -1,12 +1,10 @@
 package fergaral.datetophoto.utils
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.annotation.TargetApi
 import android.app.Activity
-import android.content.BroadcastReceiver
-import android.content.ContentValues
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
@@ -15,7 +13,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
-import android.media.ExifInterface
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -27,20 +24,13 @@ import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import android.util.Log
-
-import java.io.BufferedWriter
-import java.io.File
-import java.io.FileOutputStream
-import java.io.FileWriter
-import java.io.IOException
-import java.io.PrintWriter
-import java.util.ArrayList
-import java.util.Calendar
-import java.util.Date
+import androidx.exifinterface.media.ExifInterface
 
 import fergaral.datetophoto.R
 import fergaral.datetophoto.activities.PhotosActivity
 import fergaral.datetophoto.db.DatabaseHelper
+import java.io.*
+import java.util.*
 
 /**
  * Created by Fer on 06/10/2017.
@@ -54,7 +44,6 @@ class ProcessPhotos {
     private var tempStr = ""
     private var dialogCancelled: Boolean = false
     private var cancelledCharger: Boolean = false
-    private val mNotifStartTime: Long = 0
     private var running: Boolean = false
     private var total: Int = 0
     private var actual: Int = 0
@@ -62,16 +51,15 @@ class ProcessPhotos {
     private var paint: Paint? = null
     private var photosDb: SQLiteDatabase? = null
     private var mNotificationUtils: NotificationUtils? = null
-    private var printWriter: PrintWriter? = null
-    private var shouldRegisterPhoto: Boolean = false
     private var context: Context? = null
+    private var shouldRegisterPhoto: Boolean = false
 
     fun execute(context: Context) {
         execute(null, true, null, context)
     }
 
     fun execute(resultReceiver: ResultReceiver?, onBackground: Boolean,
-                cameraImages: ArrayList<String>?, context: Context) {
+                cameraImages: ArrayList<Image>?, context: Context) {
         this.context = context
         mNotificationUtils = NotificationUtils(context)
         scale = context.resources.displayMetrics.density
@@ -170,70 +158,42 @@ class ProcessPhotos {
         if (showNotif)
             mNotificationUtils!!.showSearchingPhotosNotification("Buscando fotos sin fechar...")
 
-        var galleryImages: List<String>?
+        var galleryImages = cameraImages ?: PhotoUtils(context).getCameraImages(Utils.getFoldersToProcess(context))
 
-        if (cameraImages != null) {
-            galleryImages = cameraImages
-        } else {
-            galleryImages = getCameraImages(context)
-        }
+        galleryImages = Utils.getPhotosWithoutDate(context, galleryImages, photosDb)
 
-        if (galleryImages != null) {
-            galleryImages = Utils.getPhotosWithoutDate(context, Utils.getImagesToProcess(context, galleryImages), photosDb)
-        }
+        total = 0
+        actual = 0
+        total = galleryImages.size
 
-        if (galleryImages != null) {
-            total = 0
-            actual = 0
-            total = galleryImages.size
+        for (receiver in receivers) {
+            if (receiver != null) {
+                val bundle = Bundle()
+                bundle.putInt("total", total)
 
-            for (receiver in receivers) {
-                if (receiver != null) {
-                    val bundle = Bundle()
-                    bundle.putInt("total", total)
-
-                    receiver.send(Activity.RESULT_OK, bundle)
-                }
+                receiver.send(Activity.RESULT_OK, bundle)
             }
+        }
 
-            LocalBroadcastManager.getInstance(context).registerReceiver(object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    dialogCancelled = intent.getBooleanExtra("dialogcancelled", false)
-                }
-            }, IntentFilter(PhotosActivity.INTENT_ACTION))
+        LocalBroadcastManager.getInstance(context).registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                dialogCancelled = intent.getBooleanExtra("dialogcancelled", false)
+            }
+        }, IntentFilter(PhotosActivity.INTENT_ACTION))
 
-            LocalBroadcastManager.getInstance(context).registerReceiver(object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    if (onBackground)
-                        cancelledCharger = intent.getBooleanExtra(CANCEL_SERVICE, false)
-                }
-            }, IntentFilter(ACTION_CANCEL_CHARGER_DISCONNECTED))
+        LocalBroadcastManager.getInstance(context).registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (onBackground)
+                    cancelledCharger = intent.getBooleanExtra(CANCEL_SERVICE, false)
+            }
+        }, IntentFilter(ACTION_CANCEL_CHARGER_DISCONNECTED))
 
-            if (showNotif)
-                mNotificationUtils!!.showProgressNotification("Procesando fotos...")
+        if (showNotif)
+            mNotificationUtils!!.showProgressNotification("Procesando fotos...")
 
-            for (s in galleryImages) {
-                var imgFile: File? = File(s)
-                if (imgFile!!.exists() && !dialogCancelled && !cancelledCharger) {
-
-                    if (LOG) {
-                        try {
-                            val dirFile = File(Environment.getExternalStorageDirectory().path
-                                    + File.separator + "Download")
-
-                            if (!dirFile.exists())
-                                dirFile.mkdirs()
-
-                            printWriter = PrintWriter(FileWriter(dirFile.path
-                                    + File.separator + "dtptimes.txt"))
-                        } catch (e: IOException) {
-                            e.printStackTrace()
-                        }
-
-                    }
-
-                    val startTime = System.currentTimeMillis()
-
+        loop@ for (image in galleryImages) {
+            if (!dialogCancelled && !cancelledCharger) {
+                context.contentResolver.openInputStream(image.uri)?.let { inputStream ->
                     //if (!Utils.isAlreadyDatestamped(imgFile)) {
 
 
@@ -248,7 +208,7 @@ class ProcessPhotos {
                     //de ese bitmap
                     options.inJustDecodeBounds = true
 
-                    BitmapFactory.decodeFile(imgFile.absolutePath, options)
+                    BitmapFactory.decodeStream(inputStream, null, options)
 
                     var imageWidth : Double = options.outWidth.toDouble()
                     var imageHeight : Double = options.outHeight.toDouble()
@@ -288,173 +248,105 @@ class ProcessPhotos {
 
                     val startTimeDecode = System.currentTimeMillis()
 
-                    var myBitmap: Bitmap? = BitmapFactory.decodeFile(imgFile.absolutePath, options)
+                    context.contentResolver.openInputStream(image.uri)?.let { inputStream ->
+                        var myBitmap: Bitmap? = BitmapFactory.decodeStream(inputStream, null, options)
 
-                    val timeDecode = System.currentTimeMillis() - startTimeDecode //En ms
-                    val timeElapsedDecode = timeDecode / 1000.0
+                        if (myBitmap == null) {
+                            actual++
 
-                    printWriter!!.println("decode image: $timeElapsedDecode")
+                            for (receiver in receivers) {
+                                if (receiver != null) {
+                                    val bundle = Bundle()
+                                    bundle.putInt("progress", actual)
 
-                    if (myBitmap == null) {
-                        actual++
-
-                        for (receiver in receivers) {
-                            if (receiver != null) {
-                                val bundle = Bundle()
-                                bundle.putInt("progress", actual)
-
-                                receiver.send(Activity.RESULT_OK, bundle)
+                                    receiver.send(Activity.RESULT_OK, bundle)
+                                }
                             }
+
+                            mNotificationUtils!!.setNotificationProgress(total, actual)
+
+                            registerPhotoIntoDb(image.toString())
+
+                            return@let
                         }
 
-                        mNotificationUtils!!.setNotificationProgress(total, actual)
+                        var date = ""
+                        var rotation = ExifInterface.ORIENTATION_NORMAL
 
-                        //Si la imagen no pudo ser decodificada, le añadimos dtp- al nombre para no volver a procesarla
-                        imgFile.renameTo(File(
-                                imgFile.parentFile.absolutePath + "/" + "dtp-" + imgFile.name))
+                        try {
+                            val exifInterface = ExifInterface(inputStream)
+                            date = getExifTag(exifInterface, ExifInterface.TAG_DATETIME, inputStream)
+                            rotation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
+                        } catch (e: IOException) {
+                            e.printStackTrace()
+                        }
 
-                        scanPhoto(imgFile.parentFile.absolutePath + "/" + imgFile.name.substring(4))
+                        if (isAlreadyDatestamped(myBitmap, rotation)) {
+                            return@let
+                        }
 
-                        continue
-                    }
+                        var bitmap2: Bitmap? = writeDateOnBitmap(myBitmap, date, rotation)
 
-                    tempStr += "$s -> "
+                        //Ahora la marcamos como ya fechada
+                        markAsAlreadyDatestamped(bitmap2, rotation)
 
-                    var date = ""
-                    var rotation = ExifInterface.ORIENTATION_NORMAL
+                        //Este método sirve para comprobar la rotación con la segunda interfaz EXIF
+                        //testEXIFDate(imgFile.getAbsolutePath());
 
-                    try {
-                        val exifInterface = ExifInterface(imgFile.absolutePath)
-                        date = getExifTag(exifInterface, ExifInterface.TAG_DATETIME, imgFile)
-                        rotation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                    }
+                        @Suppress("UNUSED_VALUE")
+                        myBitmap = null
 
-                    val startTimeWriteDate = System.currentTimeMillis()
+                        /*if(Utils.overwritePhotos(this)) {
+                                    //CapturePhotoUtils.insertImage(getContentResolver(), bitmap2, imgFile.getName() + "-dtp.jpg", "generated using Date To Photo");
+                                    savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtpo-" + imgFile.getName(), imgFile, true
+                                    );
+                                }else{
+                                    savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtp-" + imgFile.getName(), imgFile, true
+                                    );
+                                }*/
 
-                    if (isAlreadyDatestamped(myBitmap, rotation)) {
-                        continue
-                    }
-
-                    var bitmap2: Bitmap? = writeDateOnBitmap(myBitmap, date, rotation)
-
-                    val endTimeWriteDate = System.currentTimeMillis() - startTimeWriteDate
-                    val elapsedTimeWriteDate = endTimeWriteDate / 1000.0
-
-                    printWriter!!.println("write date: " + elapsedTimeWriteDate)
-
-                    //Ahora la marcamos como ya fechada
-                    markAsAlreadyDatestamped(bitmap2, rotation)
-
-                    //Este método sirve para comprobar la rotación con la segunda interfaz EXIF
-                    //testEXIFDate(imgFile.getAbsolutePath());
-
-                    @Suppress("UNUSED_VALUE")
-                    myBitmap = null
-
-                    /*if(Utils.overwritePhotos(this)) {
-                                //CapturePhotoUtils.insertImage(getContentResolver(), bitmap2, imgFile.getName() + "-dtp.jpg", "generated using Date To Photo");
-                                savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtpo-" + imgFile.getName(), imgFile, true
-                                );
-                            }else{
-                                savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtp-" + imgFile.getName(), imgFile, true
-                                );
-                            }*/
-
-                    val startTimeSavePhoto = System.currentTimeMillis()
-
-                    if (Utils.overwritePhotos(context) && !keepLargePhoto) {
-                        savePhoto(bitmap2, imgFile.parentFile.absolutePath, "dtpo-" + imgFile.name, imgFile, true
-                        )
-
-                        if (shouldRegisterPhoto)
-                            registerPhotoIntoDb(imgFile.absolutePath)
-                    } else {
-                        if (imgFile.parentFile.name == "Date To Photo originals") {
-                            val nameParts = imgFile.name.split("-".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
-                            val photoFolder = nameParts[0]
-                            val photoName = nameParts[1]
-
-                            val folderFile = Folders.get(photoFolder)
-
-                            savePhoto(bitmap2, folderFile!!.absolutePath, "dtpo-" + photoName,
-                                    imgFile, true)
-
-                            registerPhotoIntoDb(File(folderFile.absolutePath,
-                                    imgFile.name).path)
-                        } else {
-                            val originalsFile = File(Environment.getExternalStorageDirectory().path + "/Date To Photo originals")
-
-                            if (!originalsFile.exists())
-                                originalsFile.mkdir()
-
-                            //Guardamos la foto original en la carpeta de originales
-                            val originalPhotoFile = File(originalsFile.path, imgFile.parentFile.name
-                                    + "-" +
-                                    imgFile.name)
-
+                        if (Utils.overwritePhotos(context) && !keepLargePhoto) {
                             try {
-                                PhotoUtils.copy(imgFile,
-                                        originalPhotoFile)
-                            } catch (e: IOException) {
-                                Log.e("TAG", "Error while saving image copy")
+                                savePhoto(context, bitmap2, image.bucketName, image, inputStream, true, true)
+                            } catch (e: SecurityException) {
+                                NotificationUtils(context).showSAFPermissionNotification(image.bucketName)
+                                return@let
                             }
-
-                            savePhoto(bitmap2, imgFile.parentFile.absolutePath, "dtpo-" + imgFile.name, imgFile, true
-                            )
-
-                            registerPhotoIntoDb(imgFile.absolutePath)
-                            scanPhoto(originalPhotoFile.path)
+                            if (shouldRegisterPhoto) {
+                                registerPhotoIntoDb(image.toString())
+                            }
+                        } else {
+                            savePhoto(context, bitmap2, "Date To Photo", image, inputStream, true, false)
+                            registerPhotoIntoDb(image.toString())
                         }
-                    }
 
-                    val endTimeSavePhoto = System.currentTimeMillis() - startTimeSavePhoto
-                    val elapsedTimeSavePhoto = endTimeSavePhoto / 1000.0
+                        @Suppress("UNUSED_VALUE")
+                        bitmap2 = null
 
-                    printWriter!!.println("save photo: $elapsedTimeSavePhoto")
-
-                    @Suppress("UNUSED_VALUE")
-                    bitmap2 = null
-
-                    /* if(Utils.overwritePhotos(this))
-                            {
-                                PhotoUtils.deletePhoto(this, s);
-                            }*/
-                    //}
-                    //}
-
-                    val endTime = System.currentTimeMillis() - startTime
-                    val elapsedEndTime = endTime / 1000.0
-
-                    printWriter!!.println("total: $elapsedEndTime")
-
-                    val retrieveDB = Utils.getPhotosWithoutDate2(context, galleryImages, photosDb)
-                    printWriter!!.println("retrieve db: $retrieveDB")
-
-                    printWriter!!.close()
-                }
-
-                actual++
-
-                for (receiver in receivers) {
-                    if (receiver != null) {
-                        val bundle = Bundle()
-                        bundle.putInt("progress", actual)
-
-                        receiver.send(Activity.RESULT_OK, bundle)
+                        /* if(Utils.overwritePhotos(this))
+                                {
+                                    PhotoUtils.deletePhoto(this, s);
+                                }*/
+                        //}
+                        //}
                     }
                 }
-
-                if (showNotif)
-                    mNotificationUtils!!.setNotificationProgress(total, actual)
-
-                @Suppress("UNUSED_VALUE")
-                imgFile = null
             }
-        }
 
-        Utils.write(Environment.getExternalStorageDirectory().path + "/Download/datetophotoimages.txt", tempStr)
+            actual++
+
+            for (receiver in receivers) {
+                if (receiver != null) {
+                    val bundle = Bundle()
+                    bundle.putInt("progress", actual)
+
+                    receiver.send(Activity.RESULT_OK, bundle)
+                }
+            }
+
+            if (showNotif)
+                mNotificationUtils!!.setNotificationProgress(total, actual)
+        }
 
         if (showNotif)
             mNotificationUtils!!.endProgressNotification("El proceso ha finalizado")
@@ -533,7 +425,7 @@ class ProcessPhotos {
 
     }
 
-    private fun getExifTag(exif: ExifInterface, tag: String, imgFile: File?): String {
+    private fun getExifTag(exif: ExifInterface, tag: String, inputStream: InputStream): String {
         //De la forma: 2014:09:21 13:53:58
         val attribute = exif.getAttribute(tag)
 
@@ -570,7 +462,8 @@ class ProcessPhotos {
             return Utils.getFormattedDate(cal.time)
         }
 
-        return Utils.getFormattedDate(Date(imgFile!!.lastModified()))
+        // TODO: use lastmodified with Uri (if possible)
+        return Utils.getFormattedDate(Date())
     }
 
     private fun writeDateOnBitmap(b: Bitmap?, text: String, orientation: Int): Bitmap {
@@ -651,62 +544,95 @@ class ProcessPhotos {
         return b
     }
 
-    fun getCameraImages(context: Context): ArrayList<String>? {
-        // Set up an array of the Thumbnail Image ID column we want
-        val projection = arrayOf(MediaStore.Images.Media.DATA)
-
-
-        val cursor = context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                projection, null, null, null)
-
-        var result: ArrayList<String>? = null
-
-        if (cursor != null) {
-            result = ArrayList(cursor.count)
-
-
-            if (cursor.moveToFirst()) {
-                val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-                do {
-                    val data = cursor.getString(dataColumn)
-                    //Log.i("data :", data);
-                    result.add(data)
-                } while (cursor.moveToNext())
-            }
-            cursor.close()
-
-            //String uri3 = result.get(2);
-
-            /*File imgFile = new File(uri3);
-       if(imgFile.exists()) {
-           Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
-           iv1.setImageBitmap(myBitmap);
-       }*/
-        } else {
-            val cursor1 = context.contentResolver.query(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
-                    projection, null, null, null)
-
-            if (cursor1 != null) {
-                result = ArrayList(cursor1.count)
-
-
-                if (cursor1.moveToFirst()) {
-                    val dataColumn = cursor1.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-                    do {
-                        val data = cursor1.getString(dataColumn)
-                        //Log.i("data :", data);
-                        result.add(data)
-                    } while (cursor1.moveToNext())
-                }
-                cursor1.close()
-            } else {
-                result = null
+    @SuppressLint("InlinedApi")
+    private fun findPhotoUri(context: Context, bucketName: String, name: String): Uri? {
+        val cursor = context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Images.Media._ID), "${MediaStore.Images.Media.BUCKET_DISPLAY_NAME}=? AND ${MediaStore.Images.Media.DISPLAY_NAME}=?", arrayOf(bucketName, name), null)
+        cursor?.use {
+            if (cursor.moveToNext()) {
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                val id = cursor.getLong(idColumn)
+                return ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
             }
         }
-        return result
+        return null
     }
 
-    fun savePhoto(bmp: Bitmap?, basePath: String, name: String, imageFrom: File?, keepOrientation: Boolean) {
+    private fun savePhotoToUri(context: Context, imageUri: Uri, name: String, bmp: Bitmap) {
+        context.contentResolver.openOutputStream(imageUri).use { out ->
+            if (name.isJPEG()) {
+                bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            } else {
+                bmp.compress(Bitmap.CompressFormat.PNG, 90, out)
+            }
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.Q)
+    private fun overwritePhotoByUri(context: Context, imageUri: Uri, name: String, bmp: Bitmap) {
+        val documentUri = MediaStore.getDocumentUri(context, imageUri)
+        context.contentResolver.openOutputStream(documentUri).use { out ->
+            if (name.isJPEG()) {
+                bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            } else {
+                bmp.compress(Bitmap.CompressFormat.PNG, 90, out)
+            }
+        }
+    }
+
+    private fun savePhoto(context: Context, bmp: Bitmap?, bucketName: String, image: Image, inputStream: InputStream, keepOrientation: Boolean, overwritePhoto: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            savePhotoScopedStorage(context, bmp, bucketName, image.name, inputStream, keepOrientation, overwritePhoto)
+        } else {
+            val imageFile = File(image.path!!)
+            val basePath = if (overwritePhoto) {
+                imageFile.parentFile!!.absolutePath
+            } else {
+                Environment.getExternalStorageDirectory().path + "/" + bucketName
+            }
+            val baseFile = File(basePath)
+            if (!baseFile.exists()) {
+                baseFile.mkdirs()
+            }
+            savePhotoLegacy(bmp, basePath, if (overwritePhoto) "dtpo-${image.name}" else image.name, imageFile, keepOrientation)
+        }
+    }
+
+    @SuppressLint("InlinedApi")
+    @TargetApi(Build.VERSION_CODES.Q)
+    fun savePhotoScopedStorage(context: Context, bmp: Bitmap?, bucketName: String, name: String, inputStream: InputStream, keepOrientation: Boolean, overwritePhoto: Boolean) {
+        shouldRegisterPhoto = true
+        if (overwritePhoto) {
+            val uri = findPhotoUri(context, bucketName, name)
+            uri?.let {
+                overwritePhotoByUri(context, it, name, bmp!!)
+            }
+        } else {
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.TITLE, name)
+                put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                put(MediaStore.Images.Media.DESCRIPTION, name)
+                put(MediaStore.Images.Media.MIME_TYPE, if (name.isJPEG()) "image/jpeg" else "image/png")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$bucketName/")
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
+            }
+
+            val imageUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                    ?: return
+            savePhotoToUri(context, imageUri, name, bmp!!)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                values.clear()
+                values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                context.contentResolver.update(imageUri, values, null, null)
+            }
+
+            // TODO: Move EXIF data of previous image (moveEXIFdata method)
+        }
+    }
+
+    fun savePhotoLegacy(bmp: Bitmap?, basePath: String, name: String, imageFrom: File?, keepOrientation: Boolean) {
         shouldRegisterPhoto = true
         val imageFileFolder = File(basePath)
 
@@ -715,26 +641,12 @@ class ProcessPhotos {
         try {
             out = FileOutputStream(imageFileName)
 
-            val compressStartTime = System.currentTimeMillis()
-
             bmp!!.compress(Bitmap.CompressFormat.JPEG, 90, out)
-
-            val compressTimeMillis = System.currentTimeMillis() - compressStartTime
-            val compressTime = compressTimeMillis / 1000.0
-            printWriter!!.println("compress image: $compressTime")
 
             out.flush()
             out.close()
 
-            val moveEXIFStartTime = System.currentTimeMillis()
-
             moveEXIFdata(imageFrom, imageFileName, keepOrientation)
-
-            val moveEXIFTimeMillis = System.currentTimeMillis() - moveEXIFStartTime
-            val moveEXIFTime = moveEXIFTimeMillis / 1000.0
-            printWriter!!.println("move exif: $moveEXIFTime")
-
-            val renameStartTime = System.currentTimeMillis()
 
             if (imageFileName.name.startsWith("dtpo-")) { //Si se cumple, sobreescribimos
                 val previousFile = File(imageFileName.toString())
@@ -756,25 +668,16 @@ class ProcessPhotos {
                 shouldRegisterPhoto = renamed
             }
 
-            val renameTimeMillis = System.currentTimeMillis() - renameStartTime
-            val renameTime = renameTimeMillis / 1000.0
-            printWriter!!.println("rename: $renameTime")
-
-            val scanPhotoStartTime = System.currentTimeMillis()
-
             scanPhoto(imageFileName.toString())
-
-            val scanPhotoTimeMillis = System.currentTimeMillis() - scanPhotoStartTime
-            val scanPhotoTime = scanPhotoTimeMillis / 1000.0
-            printWriter!!.println("scan photo: $scanPhotoTime")
 
             @Suppress("UNUSED_VALUE")
             out = null
         } catch (e: Exception) {
             e.printStackTrace()
         }
-
     }
+
+    fun String.isJPEG() = toLowerCase(Locale.ROOT).endsWith(".jpg") || toLowerCase(Locale.ROOT).endsWith(".jpeg")
 
     fun moveEXIFdata(imageFrom: File?, imageTo: File, keepOrientation: Boolean) {
         try {

@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.preference.PreferenceManager
+import android.util.Log
 import androidx.fragment.app.DialogFragment
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
@@ -21,9 +22,9 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.activity.viewModels
 import androidx.core.view.*
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import com.afollestad.materialdialogs.MaterialDialog
 import com.bumptech.glide.load.DataSource
@@ -33,22 +34,22 @@ import com.bumptech.glide.request.target.Target
 import com.scalified.fab.ActionButton
 import fergaral.datetophoto.GlideApp
 import fergaral.datetophoto.R
-import fergaral.datetophoto.fragments.LoadPhotosFragment
 import fergaral.datetophoto.viewmodels.ProgressViewModel
 import fergaral.datetophoto.receivers.ActionCancelReceiver
 import fergaral.datetophoto.services.ProcessPhotosService
 import fergaral.datetophoto.utils.*
-import java.io.File
+import fergaral.datetophoto.viewmodels.LoadPhotosState
+import fergaral.datetophoto.viewmodels.PhotosViewModel
 import java.util.*
 
 /**
  * Created by fer on 18/07/15.
  */
 
-class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, ProgressListener {
+class PhotosActivity : PermissionActivity(), ProgressListener {
 
     private var photosGrid: GridView? = null
-    private var selectedPaths: ArrayList<String>? = null
+    private var selectedPaths: ArrayList<Image>? = null
     private var wasFABPressed: Boolean = false
     private var processPhotosBtn: ActionButton? = null
     private var fabSpeedDial1: ActionButton? = null
@@ -67,14 +68,14 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
     private var hideNoPhotosTextView: Boolean = false
     private var mSavedInstanceState: Bundle? = null
     private var mIntent: Intent? = null
-    private var mImagesToProcess: ArrayList<String>? = null
-    private var loadPhotosFragment: LoadPhotosFragment? = null
+    private var mImagesToProcess: ArrayList<Image>? = null
+    private val progressViewModel: ProgressViewModel by viewModels()
+    private val photosViewModel: PhotosViewModel by viewModels()
     private var isRefreshing: Boolean = false
     private var loadingProgBar: View? = null
     private var foldersSpinner: AppCompatSpinner? = null
     private var lastSelectedSpinnerPosition: Int = 0
     var shouldShowLoading: Boolean = false
-    private lateinit var progressViewModel: ProgressViewModel
     private lateinit var container: View
 
     private val isNoPhotosScreenShown: Boolean
@@ -135,6 +136,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 if (lastSelectedSpinnerPosition != position) {
                     refreshGrid()
+                    selectedPaths = arrayListOf()
                     lastSelectedSpinnerPosition = position
                 }
             }
@@ -208,6 +210,11 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         mIntent = intent
         mSavedInstanceState = savedInstanceState
 
+        if (intent.hasExtra(EXTRA_SAF_PERMISSION)) {
+            val bucketName = intent.getStringExtra(EXTRA_SAF_PERMISSION)
+            SAFPermissionChecker.check(this, bucketName)
+        }
+
         if (savedInstanceState != null)
             isRefreshing = savedInstanceState.getBoolean(IS_REFRESHING_KEY, true)
 
@@ -218,54 +225,16 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
                 FirstUseDialogFragment().show(supportFragmentManager, FirstUseDialogFragment::class.java.getSimpleName())
             }
         } else {
-            if (!isRefreshing && savedInstanceState != null && savedInstanceState.containsKey(PHOTOS_LIST_KEY)) {
-                mImagesToProcess = savedInstanceState.getStringArrayList(PHOTOS_LIST_KEY)
+            if (!isRefreshing && savedInstanceState != null && savedInstanceState.containsKey(SELECTED_PHOTOS_KEY)) {
+                selectedPaths = savedInstanceState.getParcelableArrayList(SELECTED_PHOTOS_KEY)
 
-                if (mImagesToProcess != null && mImagesToProcess!!.size > 0) {
-
-                    if (savedInstanceState.containsKey(SELECTED_PHOTOS_KEY))
-                        selectedPaths = savedInstanceState.getStringArrayList(SELECTED_PHOTOS_KEY)
-
-                    if (savedInstanceState.containsKey(FAB_PRESSED_KEY))
-                        wasFABPressed = savedInstanceState.getBoolean(FAB_PRESSED_KEY)
-
-                    if (wasFABPressed) {
-                        fabSpeedDial1!!.show()
-                        fabSpeedDial2!!.show()
-                        cardSpeedDial1!!.visibility = View.VISIBLE
-                        cardSpeedDial2!!.visibility = View.VISIBLE
-                        coverView!!.visibility = View.VISIBLE
-                        processPhotosBtn!!.setImageResource(R.drawable.ic_clear_24dp)
-                    }
-
-                    photosGrid!!.adapter = PhotosAdapter(mImagesToProcess)
-                    //processPhotosBtn.show();
-                } else {
-                    showNoPhotosScreen()
-                }
-            } else {
-                //Iniciamos la AsyncTask (en el Headless Fragment)
-                loadPhotosFragment = supportFragmentManager
-                        .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG) as LoadPhotosFragment?
-
-                if (loadPhotosFragment == null) {
-                    //Todavía no hemos creado el Fragment. Lo creamos e iniciamos la AsyncTask
-                    loadPhotosFragment = LoadPhotosFragment()
-                    supportFragmentManager
-                            .beginTransaction()
-                            .add(loadPhotosFragment!!, LOAD_PHOTOS_FRAGMENT_TAG)
-                            .commit()
-                } else {
-                    //El Fragment ya se creó (pudo ser debido a un cambio de rotación)
-                    if (isRefreshing)
-                        showLoading()
-                }
+                if (savedInstanceState.containsKey(FAB_PRESSED_KEY))
+                    wasFABPressed = savedInstanceState.getBoolean(FAB_PRESSED_KEY)
             }
 
             checkSharedPhotos(savedInstanceState, intent)
         }
 
-        progressViewModel = ViewModelProviders.of(this).get(ProgressViewModel::class.java)
         progressViewModel.progressData.observe(this, Observer {
             when (it) {
                 is ProgressViewModel.ProgressResult.Progress -> {
@@ -277,6 +246,12 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
                     onProgressChanged(it.progressPercent, it.progress)
                 }
                 is ProgressViewModel.ProgressResult.Done -> reportEnd(it.fromActionShare, it.searchPhotos)
+            }
+        })
+        photosViewModel.imagesToProcess.observe(this, Observer {
+            when (it) {
+                is LoadPhotosState.Loading -> onPreExecute()
+                is LoadPhotosState.Loaded -> onPostExecute(it.imagesToProcess)
             }
         })
     }
@@ -293,11 +268,9 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
     private fun moveViewFromBottom(view: View) {
         val originalBottomMargin = view.marginBottom
-        val originalRightMargin = view.marginRight
         ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
             v.updateLayoutParams<ViewGroup.MarginLayoutParams>{
                 bottomMargin = originalBottomMargin + insets.systemWindowInsetBottom
-                rightMargin = originalRightMargin + insets.systemWindowInsetRight
             }
             insets
         }
@@ -349,14 +322,15 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onPreExecute() {
+    fun onPreExecute() {
         showLoading()
         photosGrid!!.visibility = View.INVISIBLE
         //hideNoPhotosScreen();
         processPhotosBtn!!.hide()
     }
 
-    override fun onPostExecute(result: ArrayList<String>) {
+    fun onPostExecute(result: ArrayList<Image>) {
+        showFABIfNecessary()
         mImagesToProcess = result
 
         if (!PhotosActivity.IS_PROCESSING) {
@@ -381,7 +355,18 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         }
     }
 
-    inner class PhotosAdapter(private val images: MutableList<String>?) : BaseAdapter() {
+    private fun showFABIfNecessary() {
+        if (wasFABPressed) {
+            fabSpeedDial1!!.show()
+            fabSpeedDial2!!.show()
+            cardSpeedDial1!!.visibility = View.VISIBLE
+            cardSpeedDial2!!.visibility = View.VISIBLE
+            coverView!!.visibility = View.VISIBLE
+            processPhotosBtn!!.setImageResource(R.drawable.ic_clear_24dp)
+        }
+    }
+
+    inner class PhotosAdapter(private val images: MutableList<Image>?) : BaseAdapter() {
 
         init {
             if (images != null && images.size != 0 && isNoPhotosScreenShown) {
@@ -428,11 +413,11 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
             //Cargamos la imagen
             GlideApp.with(this@PhotosActivity)
-                    .load(File(images[position]))
+                    .load(images[position].uri)
                     .centerCrop()
                     .listener(object : RequestListener<Drawable> {
                         override fun onLoadFailed(e: GlideException?, model: Any, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                            removeImage((model as File).path)
+                            removeImage(images[position])
                             (photosGrid!!.adapter as PhotosAdapter).notifyDataSetChanged()
                             return false
                         }
@@ -448,14 +433,14 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
             return row
         }
 
-        fun removeImage(image: String) {
+        fun removeImage(image: Image) {
             images!!.remove(image)
 
             if (images.size == 0)
                 showNoPhotosScreen()
         }
 
-        fun getImage(position: Int): String {
+        fun getImage(position: Int): Image {
             return images!![position]
         }
     }
@@ -528,21 +513,21 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
     private fun handleSingleImage(intent: Intent) {
         val imageUri = intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as Uri
-        val selectedPaths = ArrayList<String>()
+        val selectedPaths = ArrayList<Image>()
 
-        selectedPaths.add(imageUri.toString())
+        selectedPaths.add(Image(imageUri.toString(), "shared", imageUri))
         //Lanzamos el servicio de procesar fotos por URI con la foto
         showProgressDialogShare(selectedPaths)
     }
 
     private fun handleMultipleImages(intent: Intent) {
         val imageUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
-        val selectedPaths = ArrayList<String>()
+        val selectedPaths = ArrayList<Image>()
 
         if (imageUris != null) {
             for (uri in imageUris) {
                 if (uri != null) {
-                    selectedPaths.add(uri.toString())
+                    selectedPaths.add(Image(uri.toString(), "shared", uri))
                 }
             }
 
@@ -646,8 +631,6 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
                         //Indicamos que ya no hay que preguntar más veces si el usuario ha usado antes la aplicación
                         photosActivity.setSearchPhotosFirstUse(false)
-
-                        photosActivity.createLoadPhotosFragment()
                         photosActivity.checkSharedPhotos(photosActivity.mSavedInstanceState, photosActivity.mIntent)
                     }
                     .cancelable(false)
@@ -673,22 +656,16 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
     }
 
     private fun refreshGrid() {
-        hideNoPhotosScreen() {
+        hideNoPhotosScreen {
             if (shouldShowLoading)
                 showLoading()
             val selectedFolderPosition = foldersSpinner!!.selectedItemPosition
             val selectedFolder = foldersSpinner!!.selectedItem as String
-            if (loadPhotosFragment != null) {
-                if (selectedFolderPosition == 0)
-                    loadPhotosFragment!!.refresh()
-                else
-                    loadPhotosFragment!!.load(selectedFolder)
+
+            if (selectedFolderPosition == 0) {
+                photosViewModel.refresh()
             } else {
-                createLoadPhotosFragment()
-                if (selectedFolderPosition == 0)
-                    loadPhotosFragment!!.refresh()
-                else
-                    loadPhotosFragment!!.load(selectedFolder)
+                photosViewModel.load(selectedFolder)
             }
 
             PhotosActivity.SHOULD_REFRESH_GRID = false
@@ -746,11 +723,11 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
 
     override fun onSaveInstanceState(outState: Bundle) {
         if (mImagesToProcess != null)
-            outState.putStringArrayList(PHOTOS_LIST_KEY, mImagesToProcess
+            outState.putParcelableArrayList(PHOTOS_LIST_KEY, mImagesToProcess
             )
 
         if (selectedPaths != null)
-            outState.putStringArrayList(SELECTED_PHOTOS_KEY, selectedPaths)
+            outState.putParcelableArrayList(SELECTED_PHOTOS_KEY, selectedPaths)
 
         outState.putBoolean(FAB_PRESSED_KEY, wasFABPressed)
 
@@ -760,21 +737,6 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         outState.putInt(LAST_SELECTED_SPINNER_POSITION_KEY, lastSelectedSpinnerPosition)
         //Dejamos que se guarden los valores por defecto (texto introdcido en un EditText, etc)
         super.onSaveInstanceState(outState)
-    }
-
-    fun createLoadPhotosFragment() {
-        //Iniciamos la AsyncTask (en el Headless Fragment)
-        loadPhotosFragment = supportFragmentManager
-                .findFragmentByTag(LOAD_PHOTOS_FRAGMENT_TAG) as LoadPhotosFragment?
-
-        if (loadPhotosFragment == null) {
-            //Todavía no hemos creado el Fragment. Lo creamos e iniciamos la AsyncTask
-            loadPhotosFragment = LoadPhotosFragment()
-            supportFragmentManager
-                    .beginTransaction()
-                    .add(loadPhotosFragment!!, LOAD_PHOTOS_FRAGMENT_TAG)
-                    .commit()
-        }
     }
 
     private fun showNoPhotosScreen() {
@@ -829,19 +791,19 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         showProgressDialog(searchPhotos, selectedPaths, connectToRunningService, false)
     }
 
-    private fun showProgressDialogShare(selectedPaths: ArrayList<String>) {
+    private fun showProgressDialogShare(selectedPaths: ArrayList<Image>) {
         showProgressDialog(false, selectedPaths, false, true)
     }
 
     private fun showProgressDialog(searchPhotos: Boolean,
-                                   selectedPaths: ArrayList<String>?,
+                                   selectedPaths: ArrayList<Image>?,
                                    connectToRunningService: Boolean = false,
                                    fromShare: Boolean = true
     ) {
         showProgressLayout()
         setProgressStatus(searchPhotos)
         val total = if (searchPhotos) {
-            PhotoUtils(this).cameraImages.size
+            PhotoUtils(this).getCameraImages().size
         } else {
             selectedPaths!!.size
         }
@@ -921,7 +883,7 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         if (!searchPhotos) {
             refreshGrid()
         } else {
-            createLoadPhotosFragment()
+            refreshGrid()
             checkSharedPhotos(mSavedInstanceState, mIntent)
         }
     }
@@ -931,7 +893,15 @@ class PhotosActivity : PermissionActivity(), LoadPhotosFragment.TaskCallbacks, P
         sendBroadcast(Intent(this, ActionCancelReceiver::class.java))
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            SAFPermissionChecker.onActivityResult(requestCode, resultCode, data)
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     companion object {
+        val EXTRA_SAF_PERMISSION = "saf_permission"
         val EXTRA_IMAGE_URI = "fergaraldatetophotoextraimageuri"
         val CONNECT_TO_RUNNING_SERVICE_KEY = "connecttorunningservice"
         var SHOULD_REFRESH_GRID = false

@@ -8,6 +8,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import fergaral.datetophoto.DateToPhoto
 import fergaral.datetophoto.activities.PhotosActivity
 import fergaral.datetophoto.listeners.ProgressChangedListener
+import fergaral.datetophoto.utils.Image
 import fergaral.datetophoto.utils.MyResultReceiver
 import fergaral.datetophoto.utils.Utils
 
@@ -25,7 +26,7 @@ class ProgressViewModel : ViewModel(), ProgressChangedListener {
     val progressData = MutableLiveData<ProgressResult>()
 
     fun start(searchPhotos: Boolean = false,
-              selectedPaths: ArrayList<String>? = null,
+              selectedPaths: ArrayList<Image>? = null,
               shareAction: Boolean = false,
               connectToRunningService: Boolean = false
     ) {

@@ -56,6 +56,10 @@ object AnimationUtils {
                 }
 
             } else {
+                if (view.visibility != View.VISIBLE) {
+                    listener?.invoke()
+                    return
+                }
                 //create the animator for this view (the final radius is 0)
                 try {
                     val anim = ViewAnimationUtils.createCircularReveal(view, cx, cy, radius, 0f)

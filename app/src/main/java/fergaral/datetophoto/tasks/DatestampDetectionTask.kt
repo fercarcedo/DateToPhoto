@@ -1,17 +1,12 @@
 package fergaral.datetophoto.tasks
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.media.ExifInterface
-
-import java.io.File
-import java.io.IOException
-
+import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import fergaral.datetophoto.algorithms.PhotoProcessedAlgorithm
 import fergaral.datetophoto.utils.NotificationUtils
-import fergaral.datetophoto.utils.PhotoUtils
 import fergaral.datetophoto.utils.Utils
+import java.io.IOException
 
 /**
  * Created by Fer on 18/10/2017.
@@ -22,23 +17,23 @@ class DatestampDetectionTask(private val context: Context, private val algorithm
     fun execute(): Float {
         val notificationUtils = NotificationUtils(context)
         notificationUtils.showProgressNotification("Ejecutando...")
-        val imagesToProcess = Utils.getImagesToProcess(context, PhotoUtils(context).cameraImages)
+        val imagesToProcess = Utils.getImagesToProcess(context)
         var numCorrect = 0
         var totalImages = 0
 
         for (i in imagesToProcess.indices) {
-            val path = imagesToProcess[i]
-            val result = algorithm.isProcessed(path)
+            val image = imagesToProcess[i]
+            val result = algorithm.isProcessed(context, image.uri)
 
             if (result != PhotoProcessedAlgorithm.Result.ERROR)
                 totalImages++
 
             if (result == PhotoProcessedAlgorithm.Result.PROCESSED) {
-                if (exifFieldFound(path)) {
+                if (exifFieldFound(image.uri)) {
                     numCorrect++
                 }
             } else if (result == PhotoProcessedAlgorithm.Result.NOT_PROCESSED) {
-                if (!exifFieldFound(path)) {
+                if (!exifFieldFound(image.uri)) {
                     numCorrect++
                 }
             }
@@ -48,15 +43,16 @@ class DatestampDetectionTask(private val context: Context, private val algorithm
         return numCorrect / totalImages.toFloat() * 100
     }
 
-    private fun exifFieldFound(imagePath: String): Boolean {
+    private fun exifFieldFound(uri: Uri): Boolean {
         try {
-            val exifInterface = ExifInterface(imagePath)
-            val makeExif = exifInterface.getAttribute(ExifInterface.TAG_MAKE)
-            return makeExif != null && makeExif.startsWith("dtp-")
+            context.contentResolver.openInputStream(uri)?.let { inputStream ->
+                val exifInterface = ExifInterface(inputStream)
+                val makeExif = exifInterface.getAttribute(ExifInterface.TAG_MAKE)
+                return@exifFieldFound makeExif != null && makeExif.startsWith("dtp-")
+            }
         } catch (e: IOException) {
             e.printStackTrace()
-            return false
         }
-
+        return false
     }
 }

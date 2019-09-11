@@ -1,5 +1,7 @@
 package fergaral.datetophoto.algorithms
 
+import android.content.Context
+import android.net.Uri
 import java.io.Serializable
 
 /**
@@ -11,5 +13,5 @@ interface PhotoProcessedAlgorithm : Serializable {
         PROCESSED, NOT_PROCESSED, ERROR
     }
 
-    fun isProcessed(photoPath: String): Result
+    fun isProcessed(context: Context, photoUri: Uri): Result
 }

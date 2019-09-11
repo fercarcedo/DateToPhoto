@@ -1,37 +1,24 @@
 package fergaral.datetophoto.utils
 
+import android.annotation.SuppressLint
+import android.content.ContentUris
 import android.content.Context
-import android.content.SharedPreferences
 import android.database.Cursor
-import android.database.sqlite.SQLiteDatabase
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Rect
-import android.media.ExifInterface
 import android.media.MediaScannerConnection
 import android.net.Uri
-import android.os.Environment
+import android.os.Build
 import android.preference.PreferenceManager
 import android.provider.MediaStore
-import android.widget.Toast
-
+import android.util.Log
+import androidx.exifinterface.media.ExifInterface
+import fergaral.datetophoto.DateToPhoto
+import fergaral.datetophoto.R
 import java.io.File
 import java.io.FileInputStream
-import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.RandomAccessFile
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
-import java.util.ArrayList
-import java.util.Calendar
-import java.util.Date
-import java.util.HashSet
-
-import fergaral.datetophoto.R
+import java.util.*
 
 /**
  * Created by Parejúa on 02/11/2014.
@@ -39,107 +26,114 @@ import fergaral.datetophoto.R
 class PhotoUtils(private val context: Context) {
     private var msConn: MediaScannerConnection? = null
 
+    val folders: Set<String>
+        @SuppressLint("InlinedApi")
+        get() {
+            val projection = arrayOf(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+
+            return queryMediaStore<String>(projection, null, null) { cursorExternal, cursorInternal, result ->
+                processFoldersCursor(cursorExternal, result)
+                processFoldersCursor(cursorInternal, result)
+            }.toSet()
+        }
+
     /**
      * Method that returns an ArrayList with the photos of the gallery
      * @return ArrayList<String> photos from gallery
-    </String> */
-    // Set up an array of the Thumbnail Image ID column we want
-    val cameraImages: ArrayList<String>
-        get() {
-            val projection = arrayOf(MediaStore.Images.Media.DATA)
-
-            val cursorExternal = context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    projection, null, null,
-                    MediaStore.MediaColumns.DATE_ADDED + " DESC")
-
-            val cursorInternal = context.contentResolver.query(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
-                    projection, null, null,
-                    MediaStore.MediaColumns.DATE_ADDED + " DESC")
-
-            val result: ArrayList<String>
-
-            if (cursorExternal != null && cursorInternal == null)
-                result = ArrayList(cursorExternal.count)
-            else if (cursorExternal != null)
-                result = ArrayList(cursorExternal.count + cursorInternal!!.count)
-            else if (cursorInternal != null)
-                result = ArrayList(cursorInternal.count)
-            else
-                result = ArrayList()
-
-            processPhotosCursor(cursorExternal, result)
-            processPhotosCursor(cursorInternal, result)
-
-            return result
+     */
+    @SuppressLint("InlinedApi")
+    fun getCameraImages(foldersToProcess: Array<String>): ArrayList<Image> {
+        val bucketName = MediaStore.Images.Media.BUCKET_DISPLAY_NAME
+        val projection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            arrayOf(MediaStore.Images.Media.DISPLAY_NAME, bucketName, MediaStore.Images.Media._ID)
+        } else {
+            arrayOf(MediaStore.Images.Media.DISPLAY_NAME, bucketName, MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA)
         }
 
-    val cameraThumbnails: List<Thumbnail>
-        get() {
-            val projection = arrayOf(MediaStore.Images.Thumbnails.DATA, MediaStore.Images.Thumbnails.IMAGE_ID, MediaStore.Images.Thumbnails._ID)
-
-            val cursorExternal = context.contentResolver.query(MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI,
-                    projection, null, null, null)
-
-            val cursorInternal = context.contentResolver.query(MediaStore.Images.Thumbnails.INTERNAL_CONTENT_URI,
-                    projection, null, null, null)
-
-            val cameraThumbnails: ArrayList<Thumbnail>
-
-            if (cursorExternal != null && cursorInternal == null)
-                cameraThumbnails = ArrayList(cursorExternal.count)
-            else if (cursorExternal != null)
-                cameraThumbnails = ArrayList(cursorExternal.count + cursorInternal!!.count)
-            else if (cursorInternal != null)
-                cameraThumbnails = ArrayList(cursorInternal.count)
-            else
-                cameraThumbnails = ArrayList()
-
-            processPhotosThumbnailPhotoCursor(cursorExternal, cameraThumbnails)
-            processPhotosThumbnailPhotoCursor(cursorInternal, cameraThumbnails)
-
-            return cameraThumbnails
+        val query = Array(foldersToProcess.size) { "?" }.joinToString(",")
+        return queryMediaStore(projection, "$bucketName IN ($query)", foldersToProcess) { cursorExternal, cursorInternal, result ->
+            processPhotosCursor(cursorExternal, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result)
+            processPhotosCursor(cursorInternal, MediaStore.Images.Media.INTERNAL_CONTENT_URI, result)
         }
+    }
 
-    private fun processPhotosThumbnailPhotoCursor(cursor: Cursor?, thumbnails: MutableList<Thumbnail>?) {
-        if (cursor == null || thumbnails == null)
+    @SuppressLint("InlinedApi")
+    fun getCameraImages(): ArrayList<Image> {
+        val bucketName = MediaStore.Images.Media.BUCKET_DISPLAY_NAME
+        val projection = arrayOf(MediaStore.Images.Media.DISPLAY_NAME, bucketName, MediaStore.Images.Media._ID)
+
+        return queryMediaStore(projection, null, null) { cursorExternal, cursorInternal, result ->
+            processPhotosCursor(cursorExternal, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result)
+            processPhotosCursor(cursorInternal, MediaStore.Images.Media.INTERNAL_CONTENT_URI, result)
+        }
+    }
+
+    private fun <T> queryMediaStore(projection: Array<String>, selection: String?, selectionArgs: Array<String>?, callback: (Cursor?, Cursor?, MutableList<T>) -> Unit): ArrayList<T> {
+        val cursorExternal = context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection, selection, selectionArgs,
+                MediaStore.MediaColumns.DATE_ADDED + " DESC")
+
+        val cursorInternal = context.contentResolver.query(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
+                projection, selection, selectionArgs,
+                MediaStore.MediaColumns.DATE_ADDED + " DESC")
+
+        val result: ArrayList<T>
+
+        result = if (cursorExternal != null && cursorInternal == null)
+            ArrayList(cursorExternal.count)
+        else if (cursorExternal != null)
+            ArrayList(cursorExternal.count + cursorInternal!!.count)
+        else if (cursorInternal != null)
+            ArrayList(cursorInternal.count)
+        else
+            ArrayList()
+
+        callback(cursorExternal, cursorInternal, result)
+
+        return result
+    }
+
+    private fun processPhotosCursor(cursor: Cursor?, baseUri: Uri, photosUriList: MutableList<Image>) {
+        processImagesCursor(cursor, baseUri, photosUriList)
+    }
+
+    @SuppressLint("InlinedApi")
+    private fun processImagesCursor(cursor: Cursor?, baseUri: Uri, photosUriList: MutableList<Image>) {
+        if (cursor == null)
             return
 
         if (cursor.moveToFirst()) {
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails.DATA)
-            val imageIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails.IMAGE_ID)
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails._ID)
-
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val displayNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+            val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
             do {
-                val thumbPath = cursor.getString(dataColumn)
-                val imageId = cursor.getInt(imageIdColumn)
-                val imageURI = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        Integer.toString(cursor.getInt(idColumn)))
-
-                thumbnails.add(Thumbnail(imageId.toString(), thumbPath, imageURI))
+                val id = cursor.getLong(idColumn)
+                val displayName = cursor.getString(displayNameColumn)
+                val bucketName = cursor.getString(bucketNameColumn)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    photosUriList.add(Image(displayName, bucketName, ContentUris.withAppendedId(baseUri, id)))
+                } else {
+                    val path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
+                    photosUriList.add(Image(displayName, bucketName, ContentUris.withAppendedId(baseUri, id), path))
+                }
             } while (cursor.moveToNext())
         }
 
         cursor.close()
     }
 
-    private fun processPhotosThumbnailCursor(cursor: Cursor, photosUriList: MutableList<String>) {
-        processImagesCursor(cursor, photosUriList, MediaStore.Images.Thumbnails.DATA)
-    }
-
-    private fun processPhotosCursor(cursor: Cursor?, photosUriList: MutableList<String>) {
-        processImagesCursor(cursor, photosUriList, MediaStore.Images.Media.DATA)
-    }
-
-    private fun processImagesCursor(cursor: Cursor?, photosUriList: MutableList<String>?, imageDataColumn: String) {
-        if (photosUriList == null || cursor == null)
+    @SuppressLint("InlinedApi")
+    private fun processFoldersCursor(cursor: Cursor?, foldersList: MutableList<String>) {
+        if (cursor == null)
             return
 
         if (cursor.moveToFirst()) {
-            val dataColumn = cursor.getColumnIndexOrThrow(imageDataColumn)
+            val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
             do {
-                val data = cursor.getString(dataColumn)
-                //Log.i("data :", data);
-                photosUriList.add(data)
+                val bucketName = cursor.getString(bucketNameColumn)
+                if ("Date To Photo" != bucketName) {
+                    foldersList.add(bucketName)
+                }
             } while (cursor.moveToNext())
         }
 
@@ -211,21 +205,7 @@ class PhotoUtils(private val context: Context) {
     companion object {
         val FIRST_USE_KEY = "firstuse"
 
-        fun getFolders(ctx: Context): ArrayList<String> {
-            val cameraImages = PhotoUtils(ctx).cameraImages
-            val folderNames = ArrayList<String>()
-
-            for (path in cameraImages) {
-                val parentFolderName = getParentFolderName(path)
-
-                if (!folderNames.contains(parentFolderName)) {
-                    folderNames.add(parentFolderName)
-                }
-            }
-
-            return folderNames
-        }
-
+        fun getFolders(context: Context): Set<String> = PhotoUtils(context).folders
 
         fun getParentFolderName(path: String): String {
             val pathSegments = path.split("/".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
@@ -248,7 +228,7 @@ class PhotoUtils(private val context: Context) {
             MediaScannerConnection.scanFile(context, arrayOf(filePath), null, null)
         }
 
-        fun selectAllFolders(context: Context): List<String> {
+        fun selectAllFolders(context: Context): Set<String> {
             val folderNames = PhotoUtils.getFolders(context)
 
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -271,9 +251,9 @@ class PhotoUtils(private val context: Context) {
             }
         }
 
-        fun incorrectFormat(image: String): Boolean {
-            return !(image.endsWith(".jpg") || image.endsWith(".JPG") || image.endsWith(".jpeg") ||
-                    image.endsWith(".JPEG") || image.endsWith(".png") || image.endsWith(".PNG"))
+        fun incorrectFormat(image: Image): Boolean {
+            return !(image.name.endsWith(".jpg") || image.name.endsWith(".JPG") || image.name.endsWith(".jpeg") ||
+                    image.name.endsWith(".JPEG") || image.name.endsWith(".png") || image.name.endsWith(".PNG"))
 
             //Puede ser que la foto sea, por ejemplo, un JPEG pero que dentro haya texto, no una imagen
             /*BitmapFactory.Options options = new BitmapFactory.Options();

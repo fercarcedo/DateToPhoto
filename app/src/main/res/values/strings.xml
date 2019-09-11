@@ -48,4 +48,8 @@
     <string name="dark_value" translatable="false">dark</string>
     <string name="set_by_battery_saver_value" translatable="false">set_by_battery_saver</string>
     <string name="system_default_value" translatable="false">system_default</string>
+    <string name="permission">Permiso</string>
+    <string name="give_permission_to_overwrite_photos">Debes conceder permiso a cada una de las carpetas seleccionadas para poder sobreescribir las fotos</string>
+    <string name="permission_necessary">Permiso necesario</string>
+    <string name="alerts">Alertas</string>
 </resources>

@@ -1,10 +1,7 @@
 package fergaral.datetophoto.utils
 
 import android.annotation.TargetApi
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -15,6 +12,7 @@ import fergaral.datetophoto.R
 import fergaral.datetophoto.activities.PhotosActivity
 import fergaral.datetophoto.activities.StoragePermissionDeniedFloatingActivity
 import fergaral.datetophoto.receivers.ActionCancelReceiver
+
 
 /**
  * Created by fer on 4/07/15.
@@ -144,20 +142,48 @@ class NotificationUtils(private val mContext: Context) {
         notifManager.notify(NOTIFICATION_ID, notifBuilder.build())
     }
 
+    fun showSAFPermissionNotification(folderName: String) {
+        val intent = Intent(mContext, PhotosActivity::class.java)
+        intent.putExtra(PhotosActivity.EXTRA_SAF_PERMISSION, folderName)
+        val pendingIntent = PendingIntent.getActivity(
+                mContext,
+                1,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notification = NotificationCompat.Builder(mContext, ALERTS_CHANNEL_ID)
+                .setContentTitle(mContext.getString(R.string.app_name))
+                .setContentText(mContext.getString(R.string.permission_necessary))
+                .setSmallIcon(R.drawable.ic_dtp_transp)
+                .setTicker(mContext.getString(R.string.permission_necessary))
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+        val notificationManager = mContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(PERMISSION_ID, notification)
+    }
+
     @TargetApi(Build.VERSION_CODES.O)
     private fun createChannels() {
         val generalChannel = NotificationChannel(GENERAL_CHANNEL_ID,
                 mContext.getString(R.string.channel_general),
                 NotificationManager.IMPORTANCE_LOW)
 
+        val alertsChannel = NotificationChannel(ALERTS_CHANNEL_ID,
+                mContext.getString(R.string.alerts),
+                NotificationManager.IMPORTANCE_DEFAULT)
+
         val notificationManager = mContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         notificationManager.createNotificationChannel(generalChannel)
+        notificationManager.createNotificationChannel(alertsChannel)
     }
 
     companion object {
 
+        private val ALERTS_CHANNEL_ID = "fergaral_datetophoto_channel_alerts"
         private val GENERAL_CHANNEL_ID = "fergaral_datetophoto_channel_general"
         val NOTIFICATION_ID = 1
+        val PERMISSION_ID = 3
     }
 }
