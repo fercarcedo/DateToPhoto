@@ -60,21 +60,21 @@ class SettingsFragment : PreferenceFragmentCompat(), SAFPermissionDialogFragment
     }
 
     private fun askForSAFPermissionIfNecessary(listPreference: FoldersListPreference?) {
-        val overwritePhotosPreference = findPreference<CheckBoxPreference>(getString(R.string.pref_overwrite_key))
-        overwritePhotosPreference?.setOnPreferenceChangeListener { preference, newValue ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val overwritePhotosPreference = findPreference<CheckBoxPreference>(getString(R.string.pref_overwrite_key))
+            overwritePhotosPreference?.setOnPreferenceChangeListener { preference, newValue ->
                 if (newValue as Boolean) {
                     SAFPermissionChecker.showSAFPermissionDialogIfNecessary(this)
                 }
+                true
             }
-            true
-        }
-        listPreference?.setOnPreferenceChangeListener { preference, newValue ->
-            val values = newValue as Collection<String>
-            if (Utils.overwritePhotos(DateToPhoto.instance)) {
-                SAFPermissionChecker.showSAFPermissionDialogIfNecessary(this, values)
+            listPreference?.setOnPreferenceChangeListener { preference, newValue ->
+                val values = newValue as Collection<String>
+                if (Utils.overwritePhotos(DateToPhoto.instance)) {
+                    SAFPermissionChecker.showSAFPermissionDialogIfNecessary(this, values)
+                }
+                true
             }
-            true
         }
     }
 
