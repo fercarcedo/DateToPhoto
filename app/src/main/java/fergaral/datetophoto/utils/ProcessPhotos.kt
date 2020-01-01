@@ -273,12 +273,14 @@ class ProcessPhotos {
                         var date = ""
                         var rotation = ExifInterface.ORIENTATION_NORMAL
 
-                        try {
-                            val exifInterface = ExifInterface(inputStream)
-                            date = getExifTag(exifInterface, ExifInterface.TAG_DATETIME, inputStream)
-                            rotation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
-                        } catch (e: IOException) {
-                            e.printStackTrace()
+                        context.contentResolver.openInputStream(image.uri)?.let { imageStream ->
+                            try {
+                                val exifInterface = ExifInterface(imageStream)
+                                date = getExifTag(exifInterface, ExifInterface.TAG_DATETIME, imageStream)
+                                rotation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
+                            } catch (e: IOException) {
+                                e.printStackTrace()
+                            }
                         }
 
                         if (isAlreadyDatestamped(myBitmap, rotation)) {
