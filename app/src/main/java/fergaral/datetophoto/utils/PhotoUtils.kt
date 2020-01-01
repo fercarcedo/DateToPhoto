@@ -31,9 +31,8 @@ class PhotoUtils(private val context: Context) {
         get() {
             val projection = arrayOf(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
 
-            return queryMediaStore<String>(projection, null, null) { cursorExternal, cursorInternal, result ->
+            return queryMediaStore<String>(projection, null, null) { cursorExternal, result ->
                 processFoldersCursor(cursorExternal, result)
-                processFoldersCursor(cursorInternal, result)
             }.toSet()
         }
 
@@ -51,9 +50,8 @@ class PhotoUtils(private val context: Context) {
         }
 
         val query = Array(foldersToProcess.size) { "?" }.joinToString(",")
-        return queryMediaStore(projection, "$bucketName IN ($query)", foldersToProcess) { cursorExternal, cursorInternal, result ->
+        return queryMediaStore(projection, "$bucketName IN ($query)", foldersToProcess) { cursorExternal, result ->
             processPhotosCursor(cursorExternal, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result)
-            processPhotosCursor(cursorInternal, MediaStore.Images.Media.INTERNAL_CONTENT_URI, result)
         }
     }
 
@@ -62,33 +60,22 @@ class PhotoUtils(private val context: Context) {
         val bucketName = MediaStore.Images.Media.BUCKET_DISPLAY_NAME
         val projection = arrayOf(MediaStore.Images.Media.DISPLAY_NAME, bucketName, MediaStore.Images.Media._ID)
 
-        return queryMediaStore(projection, null, null) { cursorExternal, cursorInternal, result ->
+        return queryMediaStore(projection, null, null) { cursorExternal, result ->
             processPhotosCursor(cursorExternal, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, result)
-            processPhotosCursor(cursorInternal, MediaStore.Images.Media.INTERNAL_CONTENT_URI, result)
         }
     }
 
-    private fun <T> queryMediaStore(projection: Array<String>, selection: String?, selectionArgs: Array<String>?, callback: (Cursor?, Cursor?, MutableList<T>) -> Unit): ArrayList<T> {
+    private fun <T> queryMediaStore(projection: Array<String>, selection: String?, selectionArgs: Array<String>?, callback: (Cursor?, MutableList<T>) -> Unit): ArrayList<T> {
         val cursorExternal = context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 projection, selection, selectionArgs,
                 MediaStore.MediaColumns.DATE_ADDED + " DESC")
 
-        val cursorInternal = context.contentResolver.query(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
-                projection, selection, selectionArgs,
-                MediaStore.MediaColumns.DATE_ADDED + " DESC")
-
-        val result: ArrayList<T>
-
-        result = if (cursorExternal != null && cursorInternal == null)
+        val result: ArrayList<T> = if (cursorExternal != null)
             ArrayList(cursorExternal.count)
-        else if (cursorExternal != null)
-            ArrayList(cursorExternal.count + cursorInternal!!.count)
-        else if (cursorInternal != null)
-            ArrayList(cursorInternal.count)
         else
             ArrayList()
 
-        callback(cursorExternal, cursorInternal, result)
+        callback(cursorExternal, result)
 
         return result
     }
