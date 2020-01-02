@@ -327,7 +327,7 @@ class ProcessPhotos {
         context.contentResolver.openInputStream(image.uri)?.use { inputStream ->
             if (Utils.overwritePhotos(context) && !keepLargePhoto) {
                 try {
-                    savePhoto(context, bitmap2, image.bucketName, image, inputStream, true, true)
+                    savePhoto(context, bitmap2, image.bucketName, image, true, true)
                 } catch (e: SecurityException) {
                     NotificationUtils(context).showSAFPermissionNotification(image.bucketName)
                     return@use
@@ -336,7 +336,7 @@ class ProcessPhotos {
                     registerPhotoIntoDb(image.toString())
                 }
             } else {
-                savePhoto(context, bitmap2, "Date To Photo", image, inputStream, true, false)
+                savePhoto(context, bitmap2, "Date To Photo", image, true, false)
                 registerPhotoIntoDb(image.toString())
             }
         }
@@ -524,7 +524,7 @@ class ProcessPhotos {
 
     private fun hasScopedStorage() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-    private fun savePhoto(context: Context, bmp: Bitmap?, bucketName: String, image: Image, inputStream: InputStream, keepOrientation: Boolean, overwritePhoto: Boolean) {
+    private fun savePhoto(context: Context, bmp: Bitmap?, bucketName: String, image: Image, keepOrientation: Boolean, overwritePhoto: Boolean) {
         if (overwritePhoto) {
             val uri = findPhotoUri(context, bucketName, image.name)
             if (uri != null && bmp != null) {
@@ -533,16 +533,16 @@ class ProcessPhotos {
             }
         } else {
             if (hasScopedStorage()) {
-                savePhotoScopedStorage(context, bmp, bucketName, image.name, inputStream, keepOrientation, overwritePhoto)
+                savePhotoScopedStorage(context, image, bmp, bucketName, image.name, keepOrientation)
             } else {
-                savePhotoLegacy(image, bucketName, bmp)
+                savePhotoLegacy(context, image, bucketName, bmp, keepOrientation)
             }
         }
     }
 
     @SuppressLint("InlinedApi")
     @TargetApi(Build.VERSION_CODES.Q)
-    fun savePhotoScopedStorage(context: Context, bmp: Bitmap?, bucketName: String, name: String, inputStream: InputStream, keepOrientation: Boolean, overwritePhoto: Boolean) {
+    fun savePhotoScopedStorage(context: Context, image: Image, bmp: Bitmap?, bucketName: String, name: String, keepOrientation: Boolean) {
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.TITLE, name)
             put(MediaStore.Images.Media.DISPLAY_NAME, name)
@@ -565,10 +565,12 @@ class ProcessPhotos {
             context.contentResolver.update(imageUri, values, null, null)
         }
 
-        // TODO: Move EXIF data of previous image (moveEXIFdata method)
+        context.contentResolver.openInputStream(imageUri)?.use { imageStream ->
+            moveEXIFData(context, image, imageStream, keepOrientation)
+        }
     }
 
-    fun savePhotoLegacy(image: Image, bucketName: String, bmp: Bitmap?) {
+    fun savePhotoLegacy(context: Context, image: Image, bucketName: String, bmp: Bitmap?, keepOrientation: Boolean) {
         val basePath = Environment.getExternalStorageDirectory().path + "/" + bucketName
         val baseFile = File(basePath)
         if (!baseFile.exists()) {
@@ -581,7 +583,7 @@ class ProcessPhotos {
                 saveBitmapToOutputStream(out, bmp, image.name)
                 out.flush()
                 out.close()
-                //moveEXIFdata(imageFrom, imageFileName, keepOrientation)
+                moveEXIFData(context, image, imageFile, keepOrientation)
                 scanPhoto(imageFile.toString())
                 shouldRegisterPhoto = true
             }
@@ -592,71 +594,87 @@ class ProcessPhotos {
 
     fun String.isJPEG() = toLowerCase(Locale.ROOT).endsWith(".jpg") || toLowerCase(Locale.ROOT).endsWith(".jpeg")
 
-    fun moveEXIFdata(imageFrom: File?, imageTo: File, keepOrientation: Boolean) {
+    private fun moveEXIFData(context: Context, image: Image, fileTo: File, keepOrientation: Boolean) {
         try {
-            val exifInterfaceFrom = ExifInterface(imageFrom!!.absolutePath)
-            val exifInterfaceTo = ExifInterface(imageTo.absolutePath)
-
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_DATETIME) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_DATETIME, exifInterfaceFrom.getAttribute(ExifInterface.TAG_DATETIME))
-            else {
-                val lastModDate = Date(imageFrom.lastModified())
-                val cal = Calendar.getInstance()
-                cal.time = lastModDate
-                val year = getStringOfNumber(cal.get(Calendar.YEAR))
-                val month = getStringOfNumber(cal.get(Calendar.MONTH) + 1)
-                val day = getStringOfNumber(cal.get(Calendar.DAY_OF_MONTH))
-                val hours = getStringOfNumber(cal.get(Calendar.HOUR))
-                val minutes = getStringOfNumber(cal.get(Calendar.MINUTE))
-                val seconds = getStringOfNumber(cal.get(Calendar.SECOND))
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_DATETIME, "$year:$month:$day $hours:$minutes:$seconds")
-            }
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_FLASH) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_FLASH, exifInterfaceFrom.getAttribute(ExifInterface.TAG_FLASH))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_FOCAL_LENGTH) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_FOCAL_LENGTH, exifInterfaceFrom.getAttribute(ExifInterface.TAG_FOCAL_LENGTH))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_ALTITUDE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_DATESTAMP) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_DATESTAMP))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_LATITUDE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_IMAGE_LENGTH) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, exifInterfaceFrom.getAttribute(ExifInterface.TAG_IMAGE_LENGTH))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_IMAGE_WIDTH) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, exifInterfaceFrom.getAttribute(ExifInterface.TAG_IMAGE_WIDTH))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_MAKE) != null) {
-                if (Utils.overwritePhotos(context!!))
-                    exifInterfaceTo.setAttribute(ExifInterface.TAG_MAKE, "dtp-" + exifInterfaceFrom.getAttribute(ExifInterface.TAG_MAKE))
-                else
-                    exifInterfaceTo.setAttribute(ExifInterface.TAG_MAKE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_MAKE))
-            } else {
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_MAKE, "dtp-")
-            }
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_MODEL) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_MODEL, exifInterfaceFrom.getAttribute(ExifInterface.TAG_MODEL))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_WHITE_BALANCE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_WHITE_BALANCE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_WHITE_BALANCE))
-            if (keepOrientation && exifInterfaceFrom.getAttribute(ExifInterface.TAG_ORIENTATION) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_ORIENTATION, exifInterfaceFrom.getAttribute(ExifInterface.TAG_ORIENTATION))
-            else
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED.toString())
-
-            exifInterfaceTo.saveAttributes()
+            val exifFrom = context.contentResolver.openInputStream(image.uri)?.use {
+                ExifInterface(it)
+            } ?: return
+            val exifTo = ExifInterface(fileTo.absolutePath)
+            moveEXIFData(image, exifFrom, exifTo, keepOrientation)
         } catch (e: IOException) {
             e.printStackTrace()
         }
+    }
 
+    private fun moveEXIFData(context: Context, image: Image, inputStreamTo: InputStream, keepOrientation: Boolean) {
+        try {
+            val exifFrom = context.contentResolver.openInputStream(image.uri)?.use {
+                ExifInterface(it)
+            } ?: return
+            val exifTo = ExifInterface(inputStreamTo)
+            moveEXIFData(image, exifFrom, exifTo, keepOrientation)
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun moveEXIFData(image: Image, exifFrom: ExifInterface, exifTo: ExifInterface, keepOrientation: Boolean) {
+        if (exifFrom.getAttribute(ExifInterface.TAG_DATETIME) != null)
+            exifTo.setAttribute(ExifInterface.TAG_DATETIME, exifFrom.getAttribute(ExifInterface.TAG_DATETIME))
+        else {
+            val lastModDate = Date(image.dateAdded)
+            val cal = Calendar.getInstance()
+            cal.time = lastModDate
+            val year = getStringOfNumber(cal.get(Calendar.YEAR))
+            val month = getStringOfNumber(cal.get(Calendar.MONTH) + 1)
+            val day = getStringOfNumber(cal.get(Calendar.DAY_OF_MONTH))
+            val hours = getStringOfNumber(cal.get(Calendar.HOUR))
+            val minutes = getStringOfNumber(cal.get(Calendar.MINUTE))
+            val seconds = getStringOfNumber(cal.get(Calendar.SECOND))
+            exifTo.setAttribute(ExifInterface.TAG_DATETIME, "$year:$month:$day $hours:$minutes:$seconds")
+        }
+        if (exifFrom.getAttribute(ExifInterface.TAG_FLASH) != null)
+            exifTo.setAttribute(ExifInterface.TAG_FLASH, exifFrom.getAttribute(ExifInterface.TAG_FLASH))
+        if (exifFrom.getAttribute(ExifInterface.TAG_FOCAL_LENGTH) != null)
+            exifTo.setAttribute(ExifInterface.TAG_FOCAL_LENGTH, exifFrom.getAttribute(ExifInterface.TAG_FOCAL_LENGTH))
+        if (exifFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE) != null)
+            exifTo.setAttribute(ExifInterface.TAG_GPS_ALTITUDE, exifFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE))
+        if (exifFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF) != null)
+            exifTo.setAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF, exifFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF))
+        if (exifFrom.getAttribute(ExifInterface.TAG_GPS_DATESTAMP) != null)
+            exifTo.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, exifFrom.getAttribute(ExifInterface.TAG_GPS_DATESTAMP))
+        if (exifFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE) != null)
+            exifTo.setAttribute(ExifInterface.TAG_GPS_LATITUDE, exifFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE))
+        if (exifFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF) != null)
+            exifTo.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, exifFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF))
+        if (exifFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE) != null)
+            exifTo.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, exifFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE))
+        if (exifFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF) != null)
+            exifTo.setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, exifFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF))
+        if (exifFrom.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD) != null)
+            exifTo.setAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD, exifFrom.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD))
+        if (exifFrom.getAttribute(ExifInterface.TAG_IMAGE_LENGTH) != null)
+            exifTo.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, exifFrom.getAttribute(ExifInterface.TAG_IMAGE_LENGTH))
+        if (exifFrom.getAttribute(ExifInterface.TAG_IMAGE_WIDTH) != null)
+            exifTo.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, exifFrom.getAttribute(ExifInterface.TAG_IMAGE_WIDTH))
+        if (exifFrom.getAttribute(ExifInterface.TAG_MAKE) != null) {
+            if (Utils.overwritePhotos(context!!))
+                exifTo.setAttribute(ExifInterface.TAG_MAKE, "dtp-" + exifFrom.getAttribute(ExifInterface.TAG_MAKE))
+            else
+                exifTo.setAttribute(ExifInterface.TAG_MAKE, exifFrom.getAttribute(ExifInterface.TAG_MAKE))
+        } else {
+            exifTo.setAttribute(ExifInterface.TAG_MAKE, "dtp-")
+        }
+        if (exifFrom.getAttribute(ExifInterface.TAG_MODEL) != null)
+            exifTo.setAttribute(ExifInterface.TAG_MODEL, exifFrom.getAttribute(ExifInterface.TAG_MODEL))
+        if (exifFrom.getAttribute(ExifInterface.TAG_WHITE_BALANCE) != null)
+            exifTo.setAttribute(ExifInterface.TAG_WHITE_BALANCE, exifFrom.getAttribute(ExifInterface.TAG_WHITE_BALANCE))
+        if (keepOrientation && exifFrom.getAttribute(ExifInterface.TAG_ORIENTATION) != null)
+            exifTo.setAttribute(ExifInterface.TAG_ORIENTATION, exifFrom.getAttribute(ExifInterface.TAG_ORIENTATION))
+        else
+            exifTo.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED.toString())
+
+        exifTo.saveAttributes()
     }
 
     fun scanPhoto(imageFileName: String) {
@@ -669,63 +687,6 @@ class ProcessPhotos {
             context!!.sendBroadcast(Intent(Intent.ACTION_MEDIA_MOUNTED,
                     Uri.parse("file://$imageFileName")))
         }
-    }
-
-    fun moveEXIFdata(imageFrom: File, imageTo: File) {
-        try {
-            val exifInterfaceFrom = ExifInterface(imageFrom.absolutePath)
-            val exifInterfaceTo = ExifInterface(imageTo.absolutePath)
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_DATETIME) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_DATETIME, exifInterfaceFrom.getAttribute(ExifInterface.TAG_DATETIME))
-            else {
-                val lastModDate = Date(imageFrom.lastModified())
-                val cal = Calendar.getInstance()
-                cal.time = lastModDate
-                val year = getStringOfNumber(cal.get(Calendar.YEAR))
-                val month = getStringOfNumber(cal.get(Calendar.MONTH) + 1)
-                val day = getStringOfNumber(cal.get(Calendar.DAY_OF_MONTH))
-                val hours = getStringOfNumber(cal.get(Calendar.HOUR_OF_DAY))
-                val minutes = getStringOfNumber(cal.get(Calendar.MINUTE))
-                val seconds = getStringOfNumber(cal.get(Calendar.SECOND))
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_DATETIME, "$year:$month:$day $hours:$minutes:$seconds")
-            }
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_FLASH) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_FLASH, exifInterfaceFrom.getAttribute(ExifInterface.TAG_FLASH))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_FOCAL_LENGTH) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_FOCAL_LENGTH, exifInterfaceFrom.getAttribute(ExifInterface.TAG_FOCAL_LENGTH))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_ALTITUDE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_DATESTAMP) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_DATESTAMP))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_LATITUDE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD, exifInterfaceFrom.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_IMAGE_LENGTH) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, exifInterfaceFrom.getAttribute(ExifInterface.TAG_IMAGE_LENGTH))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_IMAGE_WIDTH) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, exifInterfaceFrom.getAttribute(ExifInterface.TAG_IMAGE_WIDTH))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_MAKE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_MAKE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_MAKE))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_MODEL) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_MODEL, exifInterfaceFrom.getAttribute(ExifInterface.TAG_MODEL))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_WHITE_BALANCE) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_WHITE_BALANCE, exifInterfaceFrom.getAttribute(ExifInterface.TAG_WHITE_BALANCE))
-            if (exifInterfaceFrom.getAttribute(ExifInterface.TAG_ORIENTATION) != null)
-                exifInterfaceTo.setAttribute(ExifInterface.TAG_ORIENTATION, exifInterfaceFrom.getAttribute(ExifInterface.TAG_ORIENTATION))
-            exifInterfaceTo.saveAttributes()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-
     }
 
     private fun getStringOfNumber(number: Int): String {
