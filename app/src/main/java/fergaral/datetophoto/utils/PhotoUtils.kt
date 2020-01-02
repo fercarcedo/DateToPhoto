@@ -43,11 +43,7 @@ class PhotoUtils(private val context: Context) {
     @SuppressLint("InlinedApi")
     fun getCameraImages(foldersToProcess: Array<String>): ArrayList<Image> {
         val bucketName = MediaStore.Images.Media.BUCKET_DISPLAY_NAME
-        val projection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            arrayOf(MediaStore.Images.Media.DISPLAY_NAME, bucketName, MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_ADDED)
-        } else {
-            arrayOf(MediaStore.Images.Media.DISPLAY_NAME, bucketName, MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_ADDED, MediaStore.Images.Media.DATA)
-        }
+        val projection = arrayOf(MediaStore.Images.Media.DISPLAY_NAME, bucketName, MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_ADDED)
 
         val query = Array(foldersToProcess.size) { "?" }.joinToString(",")
         return queryMediaStore(projection, "$bucketName IN ($query)", foldersToProcess) { cursorExternal, result ->
@@ -99,12 +95,7 @@ class PhotoUtils(private val context: Context) {
                 val displayName = cursor.getString(displayNameColumn)
                 val bucketName = cursor.getString(bucketNameColumn)
                 val dateAdded = cursor.getLong(dateAddedColumn)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    photosUriList.add(Image(displayName, bucketName, dateAdded, ContentUris.withAppendedId(baseUri, id)))
-                } else {
-                    val path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
-                    photosUriList.add(Image(displayName, bucketName, dateAdded, ContentUris.withAppendedId(baseUri, id), path))
-                }
+                photosUriList.add(Image(displayName, bucketName, dateAdded, ContentUris.withAppendedId(baseUri, id)))
             } while (cursor.moveToNext())
         }
 

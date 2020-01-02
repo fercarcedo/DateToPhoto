@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
+import fergaral.datetophoto.DateToPhoto
 
 import fergaral.datetophoto.R
 import fergaral.datetophoto.activities.PhotosActivity
@@ -536,119 +537,81 @@ class ProcessPhotos {
 
     private fun savePhotoToUri(context: Context, imageUri: Uri, name: String, bmp: Bitmap) {
         context.contentResolver.openOutputStream(imageUri).use { out ->
-            if (name.isJPEG()) {
-                bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
-            } else {
-                bmp.compress(Bitmap.CompressFormat.PNG, 90, out)
-            }
+            out?.let { saveBitmapToOutputStream(out, bmp, name) }
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.Q)
-    private fun overwritePhotoByUri(context: Context, imageUri: Uri, name: String, bmp: Bitmap) {
-        val documentUri = MediaStore.getDocumentUri(context, imageUri)
-        context.contentResolver.openOutputStream(documentUri).use { out ->
-            if (name.isJPEG()) {
-                bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
-            } else {
-                bmp.compress(Bitmap.CompressFormat.PNG, 90, out)
-            }
+    private fun saveBitmapToOutputStream(out: OutputStream, bmp: Bitmap, name: String) {
+        if (name.isJPEG()) {
+            bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        } else {
+            bmp.compress(Bitmap.CompressFormat.PNG, 90, out)
         }
     }
+
+    private fun hasScopedStorage() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
     private fun savePhoto(context: Context, bmp: Bitmap?, bucketName: String, image: Image, inputStream: InputStream, keepOrientation: Boolean, overwritePhoto: Boolean) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            savePhotoScopedStorage(context, bmp, bucketName, image.name, inputStream, keepOrientation, overwritePhoto)
+        if (overwritePhoto) {
+            val uri = findPhotoUri(context, bucketName, image.name)
+            if (uri != null && bmp != null) {
+                savePhotoToUri(context, if (hasScopedStorage()) MediaStore.getDocumentUri(context, uri) else uri, image.name, bmp)
+                shouldRegisterPhoto = true
+            }
         } else {
-            val imageFile = File(image.path!!)
-            val basePath = if (overwritePhoto) {
-                imageFile.parentFile!!.absolutePath
+            if (hasScopedStorage()) {
+                savePhotoScopedStorage(context, bmp, bucketName, image.name, inputStream, keepOrientation, overwritePhoto)
             } else {
-                Environment.getExternalStorageDirectory().path + "/" + bucketName
+                savePhotoLegacy(image, bucketName, bmp)
             }
-            val baseFile = File(basePath)
-            if (!baseFile.exists()) {
-                baseFile.mkdirs()
-            }
-            savePhotoLegacy(bmp, basePath, if (overwritePhoto) "dtpo-${image.name}" else image.name, imageFile, keepOrientation)
         }
     }
 
     @SuppressLint("InlinedApi")
     @TargetApi(Build.VERSION_CODES.Q)
     fun savePhotoScopedStorage(context: Context, bmp: Bitmap?, bucketName: String, name: String, inputStream: InputStream, keepOrientation: Boolean, overwritePhoto: Boolean) {
-        shouldRegisterPhoto = true
-        if (overwritePhoto) {
-            val uri = findPhotoUri(context, bucketName, name)
-            uri?.let {
-                overwritePhotoByUri(context, it, name, bmp!!)
-            }
-        } else {
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.TITLE, name)
-                put(MediaStore.Images.Media.DISPLAY_NAME, name)
-                put(MediaStore.Images.Media.DESCRIPTION, name)
-                put(MediaStore.Images.Media.MIME_TYPE, if (name.isJPEG()) "image/jpeg" else "image/png")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$bucketName/")
-                    put(MediaStore.Images.Media.IS_PENDING, 1)
-                }
-            }
-
-            val imageUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                    ?: return
-            savePhotoToUri(context, imageUri, name, bmp!!)
-
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.TITLE, name)
+            put(MediaStore.Images.Media.DISPLAY_NAME, name)
+            put(MediaStore.Images.Media.DESCRIPTION, name)
+            put(MediaStore.Images.Media.MIME_TYPE, if (name.isJPEG()) "image/jpeg" else "image/png")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                values.clear()
-                values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                context.contentResolver.update(imageUri, values, null, null)
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$bucketName/")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
             }
-
-            // TODO: Move EXIF data of previous image (moveEXIFdata method)
         }
+
+        val imageUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?: return
+        savePhotoToUri(context, imageUri, name, bmp!!)
+        shouldRegisterPhoto = true
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            context.contentResolver.update(imageUri, values, null, null)
+        }
+
+        // TODO: Move EXIF data of previous image (moveEXIFdata method)
     }
 
-    fun savePhotoLegacy(bmp: Bitmap?, basePath: String, name: String, imageFrom: File?, keepOrientation: Boolean) {
-        shouldRegisterPhoto = true
-        val imageFileFolder = File(basePath)
-
-        var out: FileOutputStream?
-        val imageFileName = File(imageFileFolder, name)
+    fun savePhotoLegacy(image: Image, bucketName: String, bmp: Bitmap?) {
+        val basePath = Environment.getExternalStorageDirectory().path + "/" + bucketName
+        val baseFile = File(basePath)
+        if (!baseFile.exists()) {
+            baseFile.mkdirs()
+        }
+        val imageFile = File(baseFile, image.name)
         try {
-            out = FileOutputStream(imageFileName)
-
-            bmp!!.compress(Bitmap.CompressFormat.JPEG, 90, out)
-
-            out.flush()
-            out.close()
-
-            moveEXIFdata(imageFrom, imageFileName, keepOrientation)
-
-            if (imageFileName.name.startsWith("dtpo-")) { //Si se cumple, sobreescribimos
-                val previousFile = File(imageFileName.toString())
-                val originalFile = File(imageFileName.parentFile.absolutePath +
-                        "/" + imageFileName.name.substring(5))
-
-                //Check if copy is corrupted
-                var renamed = false
-                if (!PhotoUtils.isCorrupted(imageFileName)) {
-                    renamed = imageFileName.renameTo(
-                            originalFile)
-                }
-
-                if (previousFile.exists())
-                    previousFile.delete()
-
-                scanPhoto(previousFile.toString())
-
-                shouldRegisterPhoto = renamed
+            bmp?.let {
+                val out = FileOutputStream(imageFile)
+                saveBitmapToOutputStream(out, bmp, image.name)
+                out.flush()
+                out.close()
+                //moveEXIFdata(imageFrom, imageFileName, keepOrientation)
+                scanPhoto(imageFile.toString())
+                shouldRegisterPhoto = true
             }
-
-            scanPhoto(imageFileName.toString())
-
-            @Suppress("UNUSED_VALUE")
-            out = null
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -726,12 +689,12 @@ class ProcessPhotos {
     fun scanPhoto(imageFileName: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             MediaScannerConnection.scanFile(
-                    context!!.applicationContext,
+                    DateToPhoto.instance,
                     arrayOf(imageFileName), null
             ) { _, _ -> }
         } else {
             context!!.sendBroadcast(Intent(Intent.ACTION_MEDIA_MOUNTED,
-                    Uri.parse("file://" + imageFileName)))
+                    Uri.parse("file://$imageFileName")))
         }
     }
 

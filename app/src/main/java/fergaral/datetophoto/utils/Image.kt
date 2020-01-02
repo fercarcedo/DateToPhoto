@@ -9,8 +9,7 @@ data class Image(
         val name: String,
         val bucketName: String,
         val dateAdded: Long,
-        val uri: Uri,
-        val path: String? = null
+        val uri: Uri
 ) : Parcelable {
     override fun toString() = "$bucketName/$name"
 }
