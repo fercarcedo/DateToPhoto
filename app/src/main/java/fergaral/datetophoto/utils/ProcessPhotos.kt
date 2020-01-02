@@ -32,6 +32,7 @@ import fergaral.datetophoto.activities.PhotosActivity
 import fergaral.datetophoto.db.DatabaseHelper
 import java.io.*
 import java.util.*
+import kotlin.math.ceil
 
 /**
  * Created by Fer on 06/10/2017.
@@ -54,6 +55,7 @@ class ProcessPhotos {
     private var mNotificationUtils: NotificationUtils? = null
     private var context: Context? = null
     private var shouldRegisterPhoto: Boolean = false
+    private var keepLargePhoto: Boolean = false
 
     fun execute(context: Context) {
         execute(null, true, null, context)
@@ -135,7 +137,7 @@ class ProcessPhotos {
 
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         val showNotif = sharedPreferences.getBoolean(context.getString(R.string.pref_shownotification_key), true)
-        var keepLargePhoto = sharedPreferences.getBoolean(context.getString(R.string.pref_keeplargephoto_key), true)
+        keepLargePhoto = sharedPreferences.getBoolean(context.getString(R.string.pref_keeplargephoto_key), true)
 
         if (onBackground) {
             //Si estamos ejecutando esto mientras el dispositivo se está cargando, y hay 0 fotos en la base
@@ -194,145 +196,13 @@ class ProcessPhotos {
 
         loop@ for (image in galleryImages) {
             if (!dialogCancelled && !cancelledCharger) {
-                context.contentResolver.openInputStream(image.uri)?.let { inputStream ->
-                    //if (!Utils.isAlreadyDatestamped(imgFile)) {
-
-
-                    //File imgFileWithDate = new File(imgFile.getParentFile().getAbsolutePath() + "/dtp-" + imgFile.getName());
-
-                    //if (!imgFileWithDate.exists() && Utils.processSelectedFolder(this, PhotoUtils.getParentFolderName(s))) {
-
-                    //Primero obtenemos ancho y alto de la imagen
-                    var options = BitmapFactory.Options()
-
-                    //Al establecerlo a true, el decodificador retornará null, pero options tendrá el ancho y alto
-                    //de ese bitmap
-                    options.inJustDecodeBounds = true
-
-                    BitmapFactory.decodeStream(inputStream, null, options)
-
-                    var imageWidth : Double = options.outWidth.toDouble()
-                    var imageHeight : Double = options.outHeight.toDouble()
-
-                    //Hay que asegurarse de que nuestro bitmap no exceda el tamaño de maxMemory
-                    // (Runtime.getRuntime().maxMemory()), teniendo en cuenta que cada píxel ocupa 4 bytes
-                    val maxMemory = Runtime.getRuntime().maxMemory() / 1024
-                    val usedMemory = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1024
-                    val freeMemory = maxMemory - usedMemory
-
-                    var imageSize = (imageWidth * imageHeight * 4 / 1024).toLong() //Este valor era 12 unidades menos que el que debía ser
-                    var wasLarge = false
-
-                    if (imageSize >= freeMemory) {
-                        wasLarge = true
+                context.contentResolver.openInputStream(image.uri)?.let {
+                    val options = BitmapFactory.Options()
+                    it.use { inputStream ->
+                        options.inJustDecodeBounds = true
+                        BitmapFactory.decodeStream(inputStream, null, options)
                     }
-
-                    keepLargePhoto = keepLargePhoto && wasLarge
-
-                    while (imageSize >= freeMemory) {
-                        imageWidth /= 1.15
-                        imageHeight /= 1.15
-                        imageSize = (imageWidth * imageHeight * 4 / 1024).toLong()
-                    }
-
-                    val previousSize = (options.outWidth * options.outHeight * 4 / 1024).toLong()
-                    //double reduction = (double)previousSize / imageSize;
-                    val reduction = Math.ceil(previousSize.toDouble() / imageSize).toInt()
-
-                    options = BitmapFactory.Options()
-
-                    options.inMutable = true
-                    options.inPreferredConfig = Bitmap.Config.ARGB_8888
-
-                    if (wasLarge)
-                        options.inSampleSize = reduction
-
-                    val startTimeDecode = System.currentTimeMillis()
-
-                    context.contentResolver.openInputStream(image.uri)?.let { inputStream ->
-                        var myBitmap: Bitmap? = BitmapFactory.decodeStream(inputStream, null, options)
-
-                        if (myBitmap == null) {
-                            actual++
-
-                            for (receiver in receivers) {
-                                if (receiver != null) {
-                                    val bundle = Bundle()
-                                    bundle.putInt("progress", actual)
-
-                                    receiver.send(Activity.RESULT_OK, bundle)
-                                }
-                            }
-
-                            mNotificationUtils!!.setNotificationProgress(total, actual)
-
-                            registerPhotoIntoDb(image.toString())
-
-                            return@let
-                        }
-
-                        var date = ""
-                        var rotation = ExifInterface.ORIENTATION_NORMAL
-
-                        context.contentResolver.openInputStream(image.uri)?.let { imageStream ->
-                            try {
-                                val exifInterface = ExifInterface(imageStream)
-                                date = getExifTag(exifInterface, ExifInterface.TAG_DATETIME, image)
-                                rotation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
-                            } catch (e: IOException) {
-                                e.printStackTrace()
-                            }
-                        }
-
-                        if (isAlreadyDatestamped(myBitmap, rotation)) {
-                            return@let
-                        }
-
-                        var bitmap2: Bitmap? = writeDateOnBitmap(myBitmap, date, rotation)
-
-                        //Ahora la marcamos como ya fechada
-                        markAsAlreadyDatestamped(bitmap2, rotation)
-
-                        //Este método sirve para comprobar la rotación con la segunda interfaz EXIF
-                        //testEXIFDate(imgFile.getAbsolutePath());
-
-                        @Suppress("UNUSED_VALUE")
-                        myBitmap = null
-
-                        /*if(Utils.overwritePhotos(this)) {
-                                    //CapturePhotoUtils.insertImage(getContentResolver(), bitmap2, imgFile.getName() + "-dtp.jpg", "generated using Date To Photo");
-                                    savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtpo-" + imgFile.getName(), imgFile, true
-                                    );
-                                }else{
-                                    savePhoto(bitmap2, imgFile.getParentFile().getAbsolutePath(), "dtp-" + imgFile.getName(), imgFile, true
-                                    );
-                                }*/
-
-                        if (Utils.overwritePhotos(context) && !keepLargePhoto) {
-                            try {
-                                savePhoto(context, bitmap2, image.bucketName, image, inputStream, true, true)
-                            } catch (e: SecurityException) {
-                                NotificationUtils(context).showSAFPermissionNotification(image.bucketName)
-                                return@let
-                            }
-                            if (shouldRegisterPhoto) {
-                                registerPhotoIntoDb(image.toString())
-                            }
-                        } else {
-                            savePhoto(context, bitmap2, "Date To Photo", image, inputStream, true, false)
-                            registerPhotoIntoDb(image.toString())
-                        }
-
-                        @Suppress("UNUSED_VALUE")
-                        bitmap2 = null
-
-                        /* if(Utils.overwritePhotos(this))
-                                {
-                                    PhotoUtils.deletePhoto(this, s);
-                                }*/
-                        //}
-                        //}
-                    }
+                    handlePhoto(context, image, options)
                 }
             }
 
@@ -370,6 +240,109 @@ class ProcessPhotos {
 
         if (dialogCancelled)
             dialogCancelled = false
+    }
+
+    private fun handlePhoto(context: Context, image: Image, options: BitmapFactory.Options) {
+        var imageWidth : Double = options.outWidth.toDouble()
+        var imageHeight : Double = options.outHeight.toDouble()
+
+        // We have to make sure our bitmap doesn't exceed maxMemory size
+        // (Runtime.getRuntime().maxMemory()), taking into account each pixel is 4 bytes in size
+        val maxMemory = Runtime.getRuntime().maxMemory() / 1024
+        val usedMemory = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1024
+        val freeMemory = maxMemory - usedMemory
+
+        var imageSize = (imageWidth * imageHeight * 4 / 1024).toLong()
+        var wasLarge = false
+
+        if (imageSize >= freeMemory) {
+            wasLarge = true
+        }
+
+        keepLargePhoto = keepLargePhoto && wasLarge
+
+        while (imageSize >= freeMemory) {
+            imageWidth /= 1.15
+            imageHeight /= 1.15
+            imageSize = (imageWidth * imageHeight * 4 / 1024).toLong()
+        }
+
+        val previousSize = (options.outWidth * options.outHeight * 4 / 1024).toLong()
+        val reduction = ceil(previousSize.toDouble() / imageSize).toInt()
+
+        val options = BitmapFactory.Options()
+
+        options.inMutable = true
+        options.inPreferredConfig = Bitmap.Config.ARGB_8888
+
+        if (wasLarge)
+            options.inSampleSize = reduction
+
+        var myBitmap = context.contentResolver.openInputStream(image.uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream, null, options)
+        }
+
+        if (myBitmap == null) {
+            actual++
+
+            for (receiver in receivers) {
+                if (receiver != null) {
+                    val bundle = Bundle()
+                    bundle.putInt("progress", actual)
+
+                    receiver.send(Activity.RESULT_OK, bundle)
+                }
+            }
+
+            mNotificationUtils!!.setNotificationProgress(total, actual)
+
+            registerPhotoIntoDb(image.toString())
+
+            return
+        }
+
+        var date = ""
+        var rotation = ExifInterface.ORIENTATION_NORMAL
+
+        context.contentResolver.openInputStream(image.uri)?.use { imageStream ->
+            try {
+                val exifInterface = ExifInterface(imageStream)
+                date = getExifTag(exifInterface, ExifInterface.TAG_DATETIME, image)
+                rotation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        } ?: return
+
+        if (isAlreadyDatestamped(myBitmap, rotation)) {
+            return
+        }
+
+        var bitmap2: Bitmap? = writeDateOnBitmap(myBitmap, date, rotation)
+        markAsAlreadyDatestamped(bitmap2, rotation)
+
+        @Suppress("UNUSED_VALUE")
+        myBitmap = null
+
+        context.contentResolver.openInputStream(image.uri)?.use { inputStream ->
+            if (Utils.overwritePhotos(context) && !keepLargePhoto) {
+                try {
+                    savePhoto(context, bitmap2, image.bucketName, image, inputStream, true, true)
+                } catch (e: SecurityException) {
+                    NotificationUtils(context).showSAFPermissionNotification(image.bucketName)
+                    return@use
+                }
+                if (shouldRegisterPhoto) {
+                    registerPhotoIntoDb(image.toString())
+                }
+            } else {
+                savePhoto(context, bitmap2, "Date To Photo", image, inputStream, true, false)
+                registerPhotoIntoDb(image.toString())
+            }
+        }
+
+        @Suppress("UNUSED_VALUE")
+        bitmap2 = null
     }
 
     private fun isAlreadyDatestamped(myBitmap: Bitmap?, rotation: Int): Boolean {
