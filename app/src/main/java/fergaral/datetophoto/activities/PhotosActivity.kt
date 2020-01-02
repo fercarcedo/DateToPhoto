@@ -515,7 +515,7 @@ class PhotosActivity : PermissionActivity(), ProgressListener {
         val imageUri = intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as Uri
         val selectedPaths = ArrayList<Image>()
 
-        selectedPaths.add(Image(imageUri.toString(), "shared", imageUri))
+        selectedPaths.add(Image(imageUri.toString(), "shared", Date().time, imageUri))
         //Lanzamos el servicio de procesar fotos por URI con la foto
         showProgressDialogShare(selectedPaths)
     }
@@ -527,7 +527,7 @@ class PhotosActivity : PermissionActivity(), ProgressListener {
         if (imageUris != null) {
             for (uri in imageUris) {
                 if (uri != null) {
-                    selectedPaths.add(Image(uri.toString(), "shared", uri))
+                    selectedPaths.add(Image(uri.toString(), "shared", Date().time, uri))
                 }
             }
 

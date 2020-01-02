@@ -8,6 +8,7 @@ import kotlinx.android.parcel.Parcelize
 data class Image(
         val name: String,
         val bucketName: String,
+        val dateAdded: Long,
         val uri: Uri,
         val path: String? = null
 ) : Parcelable {

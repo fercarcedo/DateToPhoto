@@ -276,7 +276,7 @@ class ProcessPhotos {
                         context.contentResolver.openInputStream(image.uri)?.let { imageStream ->
                             try {
                                 val exifInterface = ExifInterface(imageStream)
-                                date = getExifTag(exifInterface, ExifInterface.TAG_DATETIME, imageStream)
+                                date = getExifTag(exifInterface, ExifInterface.TAG_DATETIME, image)
                                 rotation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
                             } catch (e: IOException) {
                                 e.printStackTrace()
@@ -427,45 +427,20 @@ class ProcessPhotos {
 
     }
 
-    private fun getExifTag(exif: ExifInterface, tag: String, inputStream: InputStream): String {
-        //De la forma: 2014:09:21 13:53:58
+    private fun getExifTag(exif: ExifInterface, tag: String, image: Image): String {
+        // 2014:09:21 13:53:58
         val attribute = exif.getAttribute(tag)
 
-        if (attribute != null) {
-            /*String date = attribute.substring(0, attribute.indexOf(" ")); //Ejemplo: 2014:09:21
-            StringBuffer buffer = new StringBuffer(date);
-
-            for (int i = 0; i < date.length(); i++) {
-                if (date.charAt(i) == ':')
-                    buffer.setCharAt(i, '/');
-            }
-
-            String dateString = "";
-
-            try {
-                Date date1 = new SimpleDateFormat("yyyy-MM-dd").parse(buffer.toString());
-                dateString = new SimpleDateFormat("dd-MM-yyyy").format(date1);
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-
-            return dateString;*/
-
+        return Utils.getFormattedDate(if (attribute != null) {
             val year = Integer.parseInt(attribute.substring(0, 4))
             val month = Integer.parseInt(attribute.substring(5, 7))
             val day = Integer.parseInt(attribute.substring(8, 10))
 
-            //return day + "/" + month + "/" + year;
-
-            //Return a localized date String
             val cal = Calendar.getInstance()
             cal.set(year, month - 1, day)
 
-            return Utils.getFormattedDate(cal.time)
-        }
-
-        // TODO: use lastmodified with Uri (if possible)
-        return Utils.getFormattedDate(Date())
+            cal.time
+        } else Date(image.dateAdded))
     }
 
     private fun writeDateOnBitmap(b: Bitmap?, text: String, orientation: Int): Bitmap {
