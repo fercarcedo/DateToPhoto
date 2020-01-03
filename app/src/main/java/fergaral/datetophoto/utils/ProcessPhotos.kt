@@ -414,7 +414,7 @@ class ProcessPhotos {
             cal.set(year, month - 1, day)
 
             cal.time
-        } else Date(image.dateAdded))
+        } else Date(image.dateAdded * 1000))
     }
 
     private fun writeDateOnBitmap(b: Bitmap?, text: String, orientation: Int): Bitmap {
