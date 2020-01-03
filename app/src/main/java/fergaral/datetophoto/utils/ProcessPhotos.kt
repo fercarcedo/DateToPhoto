@@ -509,8 +509,8 @@ class ProcessPhotos {
     }
 
     private fun savePhotoToUri(context: Context, imageUri: Uri, name: String, bmp: Bitmap) {
-        context.contentResolver.openOutputStream(imageUri).use { out ->
-            out?.let { saveBitmapToOutputStream(out, bmp, name) }
+        context.contentResolver.openFileDescriptor(imageUri, "w").use { descriptor ->
+            descriptor?.let { saveBitmapToOutputStream(FileOutputStream(descriptor.fileDescriptor), bmp, name) }
         }
     }
 
